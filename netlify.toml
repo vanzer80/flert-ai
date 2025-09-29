@@ -1,0 +1,11 @@
+[build]
+  command = "bash build.sh"
+  publish = "build_output"
+
+[build.environment]
+  FLUTTER_VERSION = "stable"
+
+[[redirects]]
+  from = "/favicon.ico"
+  to = "/favicon.png"
+  status = 200
