@@ -13,66 +13,123 @@ class HomeScreen extends StatelessWidget {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
+              Color(0xFFFF6B6B),
               Color(0xFFFF8E8E),
+              Color(0xFFFFB3B3),
               Color(0xFFFFE7E7),
-              AppColors.backgroundColor,
             ],
-            stops: [0.0, 0.3, 1.0],
+            stops: [0.0, 0.3, 0.7, 1.0],
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header com logo
-              _buildHeader(context),
-              
-              // Conteúdo principal
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Mockup do celular
-                        _buildPhoneMockup(),
-                        
-                        const SizedBox(height: 30),
-                        
-                        // Título
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 40),
-                          child: Text(
-                            'Envie um chat ou a bio do seu match',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                              height: 1.2,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 30),
-                        
-                        // Botão principal
-                        _buildMainButton(context),
-                        
-                        const SizedBox(height: 20),
-                      ],
-                    ),
+        child: Stack(
+          children: [
+            // Formas onduladas abstratas
+            Positioned(
+              top: -100,
+              right: -50,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.1),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
               ),
-              
-              // Navegação inferior
-              _buildBottomNavigation(context),
-            ],
-          ),
+            ),
+            Positioned(
+              bottom: -80,
+              left: -60,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFFF6B6B).withOpacity(0.2),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 150,
+              left: -40,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.08),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Column(
+                children: [
+                  // Header com logo
+                  _buildHeader(context),
+                  
+                  // Conteúdo principal
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Mockup do celular
+                            _buildPhoneMockup(),
+                            
+                            const SizedBox(height: 30),
+                            
+                            // Título
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 40),
+                              child: Text(
+                                'Envie um chat ou a bio do seu match',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                  height: 1.2,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 30),
+                            
+                            // Botão principal
+                            _buildMainButton(context),
+                            
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  // Navegação inferior
+                  _buildBottomNavigation(context),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -133,181 +190,210 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildPhoneMockup() {
-    return Container(
-      width: 240,
-      height: 400,
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+    return SizedBox(
+      width: 280,
+      height: 500,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // Notch do iPhone
+          // iPhone moderno com Dynamic Island
           Positioned(
-            top: 0,
-            left: 100,
-            right: 100,
+            left: 20,
+            top: 50,
             child: Container(
-              height: 30,
-              decoration: const BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(15),
-                  bottomRight: Radius.circular(15),
-                ),
-              ),
-            ),
-          ),
-          
-          // Tela do celular
-          Positioned(
-            top: 10,
-            left: 10,
-            right: 10,
-            bottom: 10,
-            child: Container(
+              width: 240,
+              height: 400,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(35),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 25,
+                    offset: const Offset(0, 15),
+                  ),
+                ],
               ),
-              child: Column(
+              child: Stack(
                 children: [
-                  // Header da conversa
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(25),
-                        topRight: Radius.circular(25),
+                  // Dynamic Island
+                  Positioned(
+                    top: 8,
+                    left: 85,
+                    child: Container(
+                      width: 70,
+                      height: 25,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        // Avatar
-                        Container(
-                          width: 35,
-                          height: 35,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(17.5),
-                            gradient: AppColors.primaryGradient,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Nome e status
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Karinny',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                'Digitando...',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Ícones
-                        const Icon(Icons.videocam, color: Colors.grey),
-                        const SizedBox(width: 16),
-                        const Icon(Icons.call, color: Colors.grey),
-                      ],
                     ),
                   ),
                   
-                  // Mensagens
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
+                  // Tela interna
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    right: 8,
+                    bottom: 8,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                       child: Column(
                         children: [
-                          // Mensagem recebida
-                          _buildMessage(
-                            'Você fica muito fofo com esse maiô',
-                            isMe: false,
-                            color: AppColors.accentColor,
-                          ),
-                          
-                          const SizedBox(height: 6),
-                          
-                          // Mensagem recebida
-                          _buildMessage(
-                            'Problemas? Eu? Nunca😇',
-                            isMe: false,
-                            color: Colors.grey[300]!,
-                            textColor: Colors.black,
-                          ),
-                          
-                          const SizedBox(height: 6),
-                          
-                          // Mensagem enviada
-                          _buildMessage(
-                            'Que tal uma taça de vinho?',
-                            isMe: true,
-                            color: const Color(0xFF007AFF),
-                          ),
-                          
-                          const SizedBox(height: 6),
-                          
-                          // Mensagem recebida
-                          _buildMessage(
-                            'Estou dentro😊',
-                            isMe: false,
-                            color: Colors.grey[300]!,
-                            textColor: Colors.black,
-                          ),
-                          
-                          const SizedBox(height: 6),
-                          
-                          // Mensagem enviada
-                          _buildMessage(
-                            'Sei onde te levar no primeiro encontro!😊',
-                            isMe: true,
-                            color: AppColors.accentColor,
-                          ),
-                          
-                          const Spacer(),
-                          
-                          // Campo de mensagem
+                          // Header da conversa
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(20),
+                            padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF8F8F8),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(30),
+                                topRight: Radius.circular(30),
+                              ),
                             ),
-                            child: const Row(
+                            child: Row(
                               children: [
-                                Icon(Icons.add, color: Colors.grey, size: 18),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Mensagem',
-                                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                                // Avatar
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFFFF6B6B), Color(0xFFFF8E8E)],
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 18,
                                   ),
                                 ),
-                                Icon(Icons.mic, color: Colors.grey, size: 18),
+                                const SizedBox(width: 10),
+                                // Nome e status
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Karinny',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Digitando...',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Ícones
+                                const Icon(Icons.videocam_outlined, color: Colors.grey, size: 20),
+                                const SizedBox(width: 12),
+                                const Icon(Icons.call_outlined, color: Colors.grey, size: 20),
                               ],
+                            ),
+                          ),
+                          
+                          // Área de mensagens (sem padding para permitir overflow)
+                          Expanded(
+                            child: Container(
+                              width: double.infinity,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  // Mensagem 1 - overflow à esquerda
+                                  Positioned(
+                                    top: 20,
+                                    left: -30,
+                                    child: _buildOverflowMessage(
+                                      'Você fica muito fofo com esse maiô',
+                                      isMe: false,
+                                      color: const Color(0xFFFF6B6B),
+                                      avatar: true,
+                                    ),
+                                  ),
+                                  
+                                  // Mensagem 2 - normal esquerda
+                                  Positioned(
+                                    top: 70,
+                                    left: 15,
+                                    child: _buildOverflowMessage(
+                                      'Problemas? Eu? Nunca😇',
+                                      isMe: false,
+                                      color: const Color(0xFFE5E5EA),
+                                      textColor: Colors.black,
+                                    ),
+                                  ),
+                                  
+                                  // Mensagem 3 - overflow à direita
+                                  Positioned(
+                                    top: 120,
+                                    right: -40,
+                                    child: _buildOverflowMessage(
+                                      'Que tal uma taça de vinho?',
+                                      isMe: true,
+                                      color: const Color(0xFF007AFF),
+                                    ),
+                                  ),
+                                  
+                                  // Mensagem 4 - normal esquerda
+                                  Positioned(
+                                    top: 170,
+                                    left: 15,
+                                    child: _buildOverflowMessage(
+                                      'Estou dentro😊',
+                                      isMe: false,
+                                      color: const Color(0xFFE5E5EA),
+                                      textColor: Colors.black,
+                                    ),
+                                  ),
+                                  
+                                  // Mensagem 5 - overflow à direita
+                                  Positioned(
+                                    top: 220,
+                                    right: -35,
+                                    child: _buildOverflowMessage(
+                                      'Sei onde te levar no primeiro encontro!😊',
+                                      isMe: true,
+                                      color: const Color(0xFFFF6B6B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          
+                          // Campo de mensagem
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF2F2F7),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.add_circle_outline, color: Colors.grey, size: 16),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'iMessage',
+                                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                                    ),
+                                  ),
+                                  Icon(Icons.mic_none, color: Colors.grey, size: 16),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -323,24 +409,76 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMessage(String text, {required bool isMe, required Color color, Color? textColor}) {
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: textColor ?? Colors.white,
-            fontSize: 11,
+  Widget _buildOverflowMessage(String text, {required bool isMe, required Color color, Color? textColor, bool avatar = false}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Avatar para mensagens da esquerda
+        if (!isMe && avatar) ...[
+          Container(
+            width: 24,
+            height: 24,
+            margin: const EdgeInsets.only(right: 6, bottom: 2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFF6B6B), Color(0xFFFF8E8E)],
+              ),
+            ),
+            child: const Icon(
+              Icons.person,
+              color: Colors.white,
+              size: 14,
+            ),
+          ),
+        ],
+        
+        // Balão da mensagem
+        Container(
+          constraints: const BoxConstraints(maxWidth: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              color: textColor ?? Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
-      ),
+        
+        // Avatar para mensagens da direita
+        if (isMe && avatar) ...[
+          Container(
+            width: 24,
+            height: 24,
+            margin: const EdgeInsets.only(left: 6, bottom: 2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF007AFF), Color(0xFF5AC8FA)],
+              ),
+            ),
+            child: const Icon(
+              Icons.person,
+              color: Colors.white,
+              size: 14,
+            ),
+          ),
+        ],
+      ],
     );
   }
 
