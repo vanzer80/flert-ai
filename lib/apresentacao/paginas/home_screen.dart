@@ -10,128 +10,120 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFF6B6B),
-              Color(0xFFFF8E8E),
-              Color(0xFFFFB3B3),
-              Color(0xFFFFE7E7),
-            ],
-            stops: [0.0, 0.3, 0.7, 1.0],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Formas onduladas abstratas
-            Positioned(
-              top: -100,
-              right: -50,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      Colors.white.withOpacity(0.1),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -80,
-              left: -60,
-              child: Container(
-                width: 180,
-                height: 180,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFFFF6B6B).withOpacity(0.2),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 150,
-              left: -40,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      Colors.white.withOpacity(0.08),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            SafeArea(
-              child: Column(
-                children: [
-                  // Header com logo
-                  _buildHeader(context),
-                  
-                  // Conteúdo principal
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Mockup do celular
-                            _buildPhoneMockup(),
-                            
-                            const SizedBox(height: 30),
-                            
-                            // Título
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 40),
-                              child: Text(
-                                'Envie um chat ou a bio do seu match',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                  height: 1.2,
-                                ),
-                                textAlign: TextAlign.center,
+      body: Stack(
+        children: [
+          // Background com formas onduladas
+          _buildWavyBackground(),
+          
+          SafeArea(
+            child: Column(
+              children: [
+                // Header com logo
+                _buildHeader(context),
+                
+                // Conteúdo principal
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Mockup do iPhone
+                          _buildPhoneMockup(),
+                          
+                          const SizedBox(height: 40),
+                          
+                          // Título
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 40),
+                            child: Text(
+                              'Envie um chat ou a bio do seu match',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                                height: 1.2,
                               ),
+                              textAlign: TextAlign.center,
                             ),
-                            
-                            const SizedBox(height: 30),
-                            
-                            // Botão principal
-                            _buildMainButton(context),
-                            
-                            const SizedBox(height: 20),
-                          ],
-                        ),
+                          ),
+                          
+                          const SizedBox(height: 30),
+                          
+                          // Botão principal
+                          _buildMainButton(context),
+                          
+                          const SizedBox(height: 20),
+                        ],
                       ),
                     ),
                   ),
-                  
-                  // Navegação inferior
-                  _buildBottomNavigation(context),
-                ],
-              ),
+                ),
+                
+                // Navegação inferior
+                _buildBottomNavigation(context),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+  }
+  
+  Widget _buildWavyBackground() {
+    return Stack(
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFFF8B8B),
+                Color(0xFFFFB3B3),
+                Color(0xFFFFD6D6),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: -100,
+          right: -50,
+          child: Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFFF6B6B).withOpacity(0.3),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 150,
+          left: -80,
+          child: Container(
+            width: 250,
+            height: 250,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFFF7B7B).withOpacity(0.25),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 100,
+          right: -100,
+          child: Container(
+            width: 350,
+            height: 350,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFFF8585).withOpacity(0.2),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -192,40 +184,43 @@ class HomeScreen extends StatelessWidget {
   Widget _buildPhoneMockup() {
     return SizedBox(
       width: 280,
-      height: 500,
+      height: 520,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // iPhone moderno com Dynamic Island
+          // Frame do iPhone
           Positioned(
-            left: 20,
-            top: 50,
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
             child: Container(
-              width: 240,
-              height: 400,
               decoration: BoxDecoration(
                 color: Colors.black,
-                borderRadius: BorderRadius.circular(35),
+                borderRadius: BorderRadius.circular(42),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.4),
-                    blurRadius: 25,
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 30,
                     offset: const Offset(0, 15),
                   ),
                 ],
               ),
               child: Stack(
                 children: [
-                  // Dynamic Island
+                  // Notch/Dynamic Island
                   Positioned(
-                    top: 8,
-                    left: 85,
+                    top: 0,
+                    left: 110,
+                    right: 110,
                     child: Container(
-                      width: 70,
-                      height: 25,
-                      decoration: BoxDecoration(
+                      height: 32,
+                      decoration: const BoxDecoration(
                         color: Colors.black,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(18),
+                          bottomRight: Radius.circular(18),
+                        ),
                       ),
                     ),
                   ),
@@ -237,164 +232,25 @@ class HomeScreen extends StatelessWidget {
                     right: 8,
                     bottom: 8,
                     child: Container(
+                      clipBehavior: Clip.none,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(36),
                       ),
-                      child: Column(
+                      child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          // Header da conversa
-                          Container(
-                            padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF8F8F8),
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(30),
-                                topRight: Radius.circular(30),
+                          Column(
+                            children: [
+                              // Header
+                              _buildChatHeader(),
+                              // Área de mensagens com overflow
+                              Expanded(
+                                child: _buildMessagesArea(),
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                // Avatar
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFFFF6B6B), Color(0xFFFF8E8E)],
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                // Nome e status
-                                const Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Karinny',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Digitando...',
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                // Ícones
-                                const Icon(Icons.videocam_outlined, color: Colors.grey, size: 20),
-                                const SizedBox(width: 12),
-                                const Icon(Icons.call_outlined, color: Colors.grey, size: 20),
-                              ],
-                            ),
-                          ),
-                          
-                          // Área de mensagens (sem padding para permitir overflow)
-                          Expanded(
-                            child: Container(
-                              width: double.infinity,
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  // Mensagem 1 - overflow à esquerda
-                                  Positioned(
-                                    top: 20,
-                                    left: -30,
-                                    child: _buildOverflowMessage(
-                                      'Você fica muito fofo com esse maiô',
-                                      isMe: false,
-                                      color: const Color(0xFFFF6B6B),
-                                      avatar: true,
-                                    ),
-                                  ),
-                                  
-                                  // Mensagem 2 - normal esquerda
-                                  Positioned(
-                                    top: 70,
-                                    left: 15,
-                                    child: _buildOverflowMessage(
-                                      'Problemas? Eu? Nunca😇',
-                                      isMe: false,
-                                      color: const Color(0xFFE5E5EA),
-                                      textColor: Colors.black,
-                                    ),
-                                  ),
-                                  
-                                  // Mensagem 3 - overflow à direita
-                                  Positioned(
-                                    top: 120,
-                                    right: -40,
-                                    child: _buildOverflowMessage(
-                                      'Que tal uma taça de vinho?',
-                                      isMe: true,
-                                      color: const Color(0xFF007AFF),
-                                    ),
-                                  ),
-                                  
-                                  // Mensagem 4 - normal esquerda
-                                  Positioned(
-                                    top: 170,
-                                    left: 15,
-                                    child: _buildOverflowMessage(
-                                      'Estou dentro😊',
-                                      isMe: false,
-                                      color: const Color(0xFFE5E5EA),
-                                      textColor: Colors.black,
-                                    ),
-                                  ),
-                                  
-                                  // Mensagem 5 - overflow à direita
-                                  Positioned(
-                                    top: 220,
-                                    right: -35,
-                                    child: _buildOverflowMessage(
-                                      'Sei onde te levar no primeiro encontro!😊',
-                                      isMe: true,
-                                      color: const Color(0xFFFF6B6B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          
-                          // Campo de mensagem
-                          Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF2F2F7),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.add_circle_outline, color: Colors.grey, size: 16),
-                                  SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'iMessage',
-                                      style: TextStyle(color: Colors.grey, fontSize: 11),
-                                    ),
-                                  ),
-                                  Icon(Icons.mic_none, color: Colors.grey, size: 16),
-                                ],
-                              ),
-                            ),
+                              // Footer
+                              _buildChatFooter(),
+                            ],
                           ),
                         ],
                       ),
@@ -408,77 +264,256 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildOverflowMessage(String text, {required bool isMe, required Color color, Color? textColor, bool avatar = false}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        // Avatar para mensagens da esquerda
-        if (!isMe && avatar) ...[
+  
+  Widget _buildChatHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(36),
+          topRight: Radius.circular(36),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Avatar
           Container(
-            width: 24,
-            height: 24,
-            margin: const EdgeInsets.only(right: 6, bottom: 2),
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              shape: BoxShape.circle,
               gradient: const LinearGradient(
-                colors: [Color(0xFFFF6B6B), Color(0xFFFF8E8E)],
+                colors: [Color(0xFFFF7B7B), Color(0xFFFF8585)],
               ),
             ),
-            child: const Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 14,
+            child: const Icon(Icons.person, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 10),
+          // Nome e status
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Karinny',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Digitando...',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           ),
+          // Ícones
+          const Icon(Icons.videocam_outlined, color: Colors.grey, size: 22),
+          const SizedBox(width: 12),
+          const Icon(Icons.call_outlined, color: Colors.grey, size: 22),
         ],
-        
-        // Balão da mensagem
-        Container(
-          constraints: const BoxConstraints(maxWidth: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+      ),
+    );
+  }
+  
+  Widget _buildMessagesArea() {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              // Mensagem 1 - Laranja saindo pela ESQUERDA
+              _buildMessageWithAvatar(
+                text: 'Você fica muito fofo com esse maiô',
+                color: const Color(0xFFFF7B7B),
+                avatarColor: const Color(0xFFFF7B7B),
+                isMe: false,
+                offsetX: -100,
               ),
+              
+              const SizedBox(height: 16),
+              
+              // Mensagem 2 - Cinza DENTRO do telefone
+              _buildMessageWithAvatar(
+                text: 'Problemas? Eu? Nunca😇',
+                color: const Color(0xFFE5E5EA),
+                avatarColor: const Color(0xFFFF7B7B),
+                isMe: false,
+                textColor: Colors.black,
+                offsetX: 0,
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Mensagem 3 - Azul saindo pela DIREITA
+              _buildMessageWithAvatar(
+                text: 'Que tal uma taça de vinho?',
+                color: const Color(0xFF007AFF),
+                avatarColor: const Color(0xFF007AFF),
+                isMe: true,
+                offsetX: 100,
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Mensagem 4 - Cinza DENTRO do telefone
+              _buildMessageWithAvatar(
+                text: 'Estou dentro😁',
+                color: const Color(0xFFE5E5EA),
+                avatarColor: const Color(0xFFFF7B7B),
+                isMe: false,
+                textColor: Colors.black,
+                offsetX: 0,
+              ),
+              
+              const Spacer(),
+              
+              // Mensagem 5 - Laranja saindo pela DIREITA (inferior)
+              _buildMessageWithAvatar(
+                text: 'Sei onde te levar no primeiro encontro!😊',
+                color: const Color(0xFFFF7B7B),
+                avatarColor: const Color(0xFFFF7B7B),
+                isMe: true,
+                offsetX: 90,
+              ),
+              
+              const SizedBox(height: 8),
             ],
           ),
-          child: Text(
-            text,
-            style: TextStyle(
-              color: textColor ?? Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
         ),
-        
-        // Avatar para mensagens da direita
-        if (isMe && avatar) ...[
-          Container(
-            width: 24,
-            height: 24,
-            margin: const EdgeInsets.only(left: 6, bottom: 2),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF007AFF), Color(0xFF5AC8FA)],
+      ],
+    );
+  }
+  
+  Widget _buildMessageWithAvatar({
+    required String text,
+    required Color color,
+    required Color avatarColor,
+    required bool isMe,
+    Color? textColor,
+    required double offsetX,
+  }) {
+    return Transform.translate(
+      offset: Offset(offsetX, 0),
+      child: Row(
+        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isMe) ...[
+            // Avatar à esquerda
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: avatarColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.person, color: Colors.white, size: 16),
+            ),
+            const SizedBox(width: 8),
+          ],
+          // Balão de mensagem
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: textColor ?? Colors.white,
+                  fontSize: 14,
+                  height: 1.3,
+                ),
               ),
             ),
-            child: const Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 14,
+          ),
+          if (isMe) ...[
+            const SizedBox(width: 8),
+            // Avatar à direita
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: avatarColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.person, color: Colors.white, size: 16),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildChatFooter() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade200, width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.camera_alt, color: Colors.grey.shade600, size: 24),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F0F0),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'iMessage',
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: 14,
+                ),
+              ),
             ),
           ),
+          const SizedBox(width: 10),
+          Icon(Icons.mic, color: Colors.grey.shade600, size: 24),
         ],
-      ],
+      ),
     );
   }
 
