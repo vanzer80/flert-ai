@@ -119,12 +119,18 @@ serve(async (req) => {
       }
 
       if (imageUrl) {
-        const content: any[] = []
+        const content: any[] = [
+          {
+            type: 'text',
+            text: 'Analise detalhadamente a imagem do perfil. Foque nos seguintes elementos visuais: aparência física da pessoa, roupas/estilo, cenário/ambiente, expressão facial, atividades ou objetos visíveis, e qualquer elemento que possa indicar personalidade ou interesses. Use essas informações para criar mensagens contextuais e personalizadas.'
+          },
+          { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } }
+        ]
+        
         if (text && text.trim().length > 0) {
-          content.push({ type: 'text', text: `Contexto de texto/bio: ${text}` })
+          content.unshift({ type: 'text', text: `Contexto adicional de texto/bio: ${text}` })
         }
-        content.push({ type: 'text', text: 'Analise a imagem e gere 3 mensagens conforme as instruções do sistema.' })
-        content.push({ type: 'image_url', image_url: { url: imageUrl, detail: 'high' } })
+        
         messages.push({ role: 'user', content })
       } else {
         // Sem URL válida da imagem: fallback para modo texto
@@ -229,7 +235,7 @@ serve(async (req) => {
       tone,
       focus,
       usage_info: {
-        model_used: image_base64 || image_path ? 'gpt-4-vision-preview' : 'gpt-4',
+        model_used: image_base64 || image_path ? 'gpt-4o' : 'gpt-4o-mini',
         tokens_used: openaiData.usage?.total_tokens || 0
       }
     }
@@ -261,26 +267,30 @@ function buildSystemPrompt(tone: string, focus?: string): string {
   const toneInstructions = getToneInstructions(tone)
   const focusInstruction = focus ? `Foque especificamente em: ${focus}. ` : ''
   
-  return `Você é um assistente de paquera especializado em criar mensagens atraentes para aplicativos de relacionamento no Brasil.
+  return `Você é um especialista em análise de imagens de perfil para aplicativos de relacionamento, com foco no mercado brasileiro.
 
-Sua tarefa é analisar imagens de perfil, conversas ou bios e gerar sugestões de mensagens criativas e envolventes.
+Sua tarefa é examinar detalhadamente a imagem fornecida e extrair informações visuais relevantes para criar mensagens de paquera personalizadas e atraentes.
 
-Tom desejado: ${toneInstructions}
+Elementos visuais a analisar:
+- Aparência física: idade aproximada, etnia, tipo físico, cabelo, olhos
+- Estilo e roupas: tipo de roupa, formalidade, acessórios, se indica lifestyle
+- Ambiente e cenário: localização, atividade, objetos ao redor
+- Expressão facial: sorriso, confiança, personalidade aparente
+- Elementos contextuais: hobbies, interesses, profissão sugerida
 
-${focusInstruction}Instruções importantes:
-- Use português brasileiro com gírias e expressões naturais
-- Seja criativo e original, evite clichês óbvios
-- Mantenha um tom respeitoso mesmo sendo descontraído
-- Cada sugestão deve ter entre 10-30 palavras
-- Gere exatamente 3 sugestões diferentes
-- Numere as sugestões de 1 a 3
-- Adapte as mensagens ao contexto visual da imagem (se fornecida)
-- Considere elementos como cenário, roupas, expressão, atividades visíveis
+${focusInstruction}Instruções específicas:
+- Use português brasileiro autêntico com gírias locais
+- Seja ORIGINAL: evite frases clichês como "oi linda" ou "como vai?"
+- Mantenha respeito: mesmo tons sensuais devem ser consensuais
+- Conecte elementos visuais às mensagens: se há praia, mencione férias; se academia, elogie dedicação
+- Cada sugestão: 15-25 palavras, criativa e contextual
+- Gere exatamente 3 sugestões numeradas
+- Foque na PERSONA revelada pela imagem
 
-Formato de resposta obrigatório:
-1. [primeira sugestão]
-2. [segunda sugestão]
-3. [terceira sugestão]`
+Formato obrigatório:
+1. [mensagem baseada no elemento visual principal]
+2. [mensagem explorando interesse/hobby aparente]
+3. [mensagem conectando estilo pessoal com conversa]`
 }
 
 function getToneInstructions(tone: string): string {
