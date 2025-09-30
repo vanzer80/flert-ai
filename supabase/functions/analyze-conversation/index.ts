@@ -87,18 +87,10 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured')
     }
 
-    // Build system prompt
-    const systemPrompt = buildSystemPrompt(tone, focus)
+    // Extract detailed image information including person's name
+    let imageDescription = 'Nenhuma imagem fornecida'
+    let personName = 'Nenhum'
 
-    // Prepare messages for OpenAI
-    const messages: OpenAIMessage[] = [
-      {
-        role: 'system',
-        content: systemPrompt
-      }
-    ]
-
-    // Add image analysis if image is provided
     if (image_base64 || image_path) {
       let imageUrl = ''
       
@@ -119,29 +111,94 @@ serve(async (req) => {
       }
 
       if (imageUrl) {
-        const content: any[] = [
+        // Step 1: Extract detailed information from image using GPT-4o Vision
+        const visionPrompt = `Analise esta imagem de perfil em detalhes e retorne as informações no seguinte formato JSON:
+{
+  "nome_da_pessoa_detectado": "[Nome da pessoa se visível na imagem, caso contrário 'Nenhum']",
+  "descricao_visual": "[Descrição detalhada da aparência, vestuário, cenário, expressão, objetos visíveis]",
+  "texto_extraido_ocr": "[Qualquer texto visível na imagem: nome de usuário, legendas, placas, camisetas]"
+}
+
+Foque especialmente em:
+- Identificar o NOME da pessoa se estiver visível (em username, legenda, texto na imagem)
+- Aparência física e estilo
+- Cenário e ambiente
+- Objetos que indiquem hobbies ou interesses
+- Qualquer texto visível na imagem`
+
+        const visionMessages: OpenAIMessage[] = [
           {
-            type: 'text',
-            text: 'Analise detalhadamente a imagem do perfil. Foque nos seguintes elementos visuais: aparência física da pessoa, roupas/estilo, cenário/ambiente, expressão facial, atividades ou objetos visíveis, e qualquer elemento que possa indicar personalidade ou interesses. Use essas informações para criar mensagens contextuais e personalizadas.'
-          },
-          { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } }
+            role: 'user',
+            content: [
+              { type: 'text', text: visionPrompt },
+              { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } }
+            ]
+          }
         ]
-        
-        if (text && text.trim().length > 0) {
-          content.unshift({ type: 'text', text: `Contexto adicional de texto/bio: ${text}` })
+
+        try {
+          const visionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              messages: visionMessages,
+              max_tokens: 500,
+              temperature: 0.3,
+            }),
+          })
+
+          if (visionResponse.ok) {
+            const visionData = await visionResponse.json()
+            const visionResult = visionData.choices[0]?.message?.content || ''
+            
+            // Try to parse JSON response
+            try {
+              const parsedVision = JSON.parse(visionResult)
+              personName = parsedVision.nome_da_pessoa_detectado || 'Nenhum'
+              const visualDesc = parsedVision.descricao_visual || ''
+              const ocrText = parsedVision.texto_extraido_ocr || ''
+              imageDescription = `Descrição Visual: ${visualDesc}\n\nTexto Extraído (OCR): ${ocrText}`
+            } catch {
+              // If JSON parsing fails, use the raw response
+              imageDescription = visionResult
+              // Try to extract name from the response text
+              const nameMatch = visionResult.match(/nome[:\s]+([\w\s]+)/i)
+              if (nameMatch) {
+                personName = nameMatch[1].trim()
+              }
+            }
+          }
+        } catch (visionError) {
+          console.error('Vision API error:', visionError)
+          // Fallback to basic description
+          imageDescription = 'Imagem de perfil fornecida, mas não foi possível extrair informações detalhadas.'
         }
-        
-        messages.push({ role: 'user', content })
-      } else {
-        // Sem URL válida da imagem: fallback para modo texto
-        const t = text && text.trim().length > 0 ? `Contexto de texto/bio: ${text}\n` : ''
-        messages.push({ role: 'user', content: `${t}Gere 3 sugestões de mensagens criativas e envolventes seguindo as instruções do sistema.` })
       }
-    } else {
-      // Text-only analysis
-      const t = text && text.trim().length > 0 ? `Contexto de texto/bio: ${text}\n` : ''
-      messages.push({ role: 'user', content: `${t}Gere 3 sugestões de mensagens criativas e envolventes seguindo as instruções do sistema.` })
     }
+
+    // Add additional text context if provided
+    if (text && text.trim().length > 0) {
+      imageDescription += `\n\nContexto adicional de texto/bio: ${text}`
+    }
+
+    // Build system prompt with extracted information
+    const systemPrompt = buildSystemPrompt(tone, focus, imageDescription, personName)
+
+    // Prepare messages for OpenAI
+    const messages: OpenAIMessage[] = [
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      {
+        role: 'user',
+        content: 'Gere 3 sugestões de mensagens criativas e envolventes seguindo todas as instruções do sistema, utilizando as informações da imagem e o nome da pessoa se disponível.'
+      }
+    ]
 
     // Call OpenAI API
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -263,10 +320,11 @@ serve(async (req) => {
   }
 })
 
-function buildSystemPrompt(tone: string, focus?: string): string {
+function buildSystemPrompt(tone: string, focus: string | undefined, imageDescription: string, personName: string): string {
   const toneInstructions = getToneInstructions(tone)
   const hasTone = tone && tone.toLowerCase() !== 'nenhum'
   const hasFocus = focus && focus.toLowerCase() !== 'nenhum'
+  const hasName = personName && personName.toLowerCase() !== 'nenhum'
   
   const toneSection = hasTone 
     ? `**Tom Escolhido pelo Usuário:** ${tone}\n${toneInstructions}\n` 
@@ -276,12 +334,17 @@ function buildSystemPrompt(tone: string, focus?: string): string {
     ? `**Foco Escolhido pelo Usuário:** ${focus}\n` 
     : `**Foco Escolhido pelo Usuário:** Nenhum\n`
   
+  const nameSection = hasName
+    ? `**Nome da Pessoa Detectado:** ${personName}\n`
+    : `**Nome da Pessoa Detectado:** Nenhum\n`
+  
   return `Você é o FlertAI, um cupido digital super observador e com um talento nato para criar mensagens de paquera autênticas e irresistíveis, focadas no mercado brasileiro. Sua missão é ajudar as pessoas a quebrar o gelo e iniciar conversas genuínas, como se um amigo próximo e divertido estivesse dando uma forcinha.
 
 Sua tarefa é analisar a imagem de perfil fornecida com olhos de águia, extraindo cada detalhe visual e textual que possa inspirar uma conexão. Use essas observações para criar mensagens de paquera personalizadas, criativas e que soem 100% humanas.
 
 **Informações Fornecidas:**
-${toneSection}${focusSection}
+- **Descrição Detalhada da Imagem:** ${imageDescription}
+${nameSection}${toneSection}${focusSection}
 **Elementos Visuais e Contextuais a Analisar Detalhadamente:**
 - **Aparência da Pessoa:** Idade aparente, estilo (clássico, moderno, alternativo), características marcantes (cabelo, olhos, sorriso)
 - **Vestuário e Acessórios:** Tipo de roupa, se há marcas, acessórios (óculos, joias, chapéus) que revelem personalidade ou status
@@ -294,8 +357,8 @@ ${toneSection}${focusSection}
 - **Seja um Cupido Moderno:** Sua voz deve ser amigável, um pouco atrevida (se o tom permitir), e sempre positiva. Pense como alguém que realmente quer ver a pessoa feliz
 - **Português Brasileiro Autêntico:** Use gírias e expressões comuns no Brasil, de forma natural e não forçada. Evite formalidades excessivas
 - **ORIGINALIDADE é a Chave:** Fuja de clichês! A mensagem deve ser única e mostrar que você realmente "viu" a pessoa na foto. Nada de "oi linda" ou "tudo bem?"
-- **Priorize Tom e Foco:**
-${hasTone ? '    - APLIQUE RIGOROSAMENTE as instruções de tom fornecidas acima\n' : ''}${hasFocus ? `    - INTEGRE O FOCO "${focus}" de forma criativa e natural em pelo menos uma das mensagens, conectando-o com os elementos visuais da imagem\n` : ''}${!hasTone && !hasFocus ? '    - **Cenário de Fallback:** Gere as mensagens com um tom descontraído e casual, utilizando os elementos mais proeminentes da imagem para contextualização, como se você estivesse fazendo uma observação inteligente e espontânea\n' : ''}- **Conexão Genuína:** A mensagem deve criar uma ponte entre o que você observou na imagem e um possível interesse ou elogio. Se a pessoa está na praia, não diga apenas "gostei da praia", mas "Essa praia parece incrível! Me deu uma vontade de te chamar pra um mergulho por lá... 😉"
+- **Priorize Tom, Foco e Nome:**
+${hasName ? `    - **USO DO NOME (PRIORIDADE ALTA):** Utilize o nome "${personName}" de forma natural e amigável em pelo menos uma das mensagens. Ex: "Oi, ${personName}! Adorei seu perfil..." ou "${personName}, seu sorriso ilumina mais que qualquer pôr do sol!"\n` : ''}${hasTone ? '    - APLIQUE RIGOROSAMENTE as instruções de tom fornecidas acima\n' : ''}${hasFocus ? `    - INTEGRE O FOCO "${focus}" de forma criativa e natural em pelo menos uma das mensagens, conectando-o com os elementos visuais da imagem\n` : ''}${!hasTone && !hasFocus && !hasName ? '    - **Cenário de Fallback:** Gere as mensagens com um tom descontraído e casual, utilizando os elementos mais proeminentes da imagem para contextualização, como se você estivesse fazendo uma observação inteligente e espontânea\n' : ''}- **Conexão Genuína:** A mensagem deve criar uma ponte entre o que você observou na imagem e um possível interesse ou elogio. Se a pessoa está na praia, não diga apenas "gostei da praia", mas "Essa praia parece incrível! Me deu uma vontade de te chamar pra um mergulho por lá... 😉"
 - **Uso de Emojis:** Use emojis de forma sutil e estratégica para adicionar emoção e personalidade, mas sem exageros. Escolha emojis que complementem o tom da mensagem
 - **Respeito Acima de Tudo:** Mesmo em tons sensuais, a mensagem deve ser respeitosa e convidar à interação, nunca ser invasiva ou objetificante
 - **Tamanho e Fluidez:** As sugestões devem ter entre 20 e 40 palavras, permitindo mais naturalidade e criatividade, sem serem excessivamente longas
