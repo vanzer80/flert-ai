@@ -103,19 +103,19 @@ class _ToneSelectionModalState extends State<ToneSelectionModal> {
       emoji: '😎',
       name: 'Casual',
       description: 'Conversa natural e espontânea',
-      isPremium: true,
+      isPremium: false, // Premium desbloqueado
     ),
     ToneOption(
       emoji: '💬',
       name: 'Genuíno',
       description: 'Mensagens autênticas e profundas',
-      isPremium: true,
+      isPremium: false, // Premium desbloqueado
     ),
     ToneOption(
       emoji: '😈',
       name: 'Sensual',
       description: 'Mensagens picantes com um toque de sedução',
-      isPremium: true,
+      isPremium: false, // Premium desbloqueado
     ),
   ];
 
