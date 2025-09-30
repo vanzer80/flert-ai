@@ -247,14 +247,170 @@ flutter test
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-## 📞 Suporte
+## 📋 Manual de Testes
 
-- **Email**: contato@flertaai.com
-- **WhatsApp**: +55 11 99999-9999
-- **Website**: https://flertaai.com
+### 🏆 FlertAI: Inovação 100% Brasileira
+
+Olá, testers!
+
+O **FlertAI** é um aplicativo desenvolvido exclusivamente por brasileiros, para brasileiros. Nossa proposta é revolucionar a experiência de paquera nos apps de relacionamento com inteligência artificial que entende nossa cultura, gírias e jeito único de se comunicar.
+
+**Características principais:**
+- Análise inteligente de imagens de perfil
+- Geração de mensagens personalizadas e envolventes
+- Foco total na realidade brasileira
+- Interface moderna e intuitiva
+
+Agradecemos sua participação! Seu feedback nos ajuda a tornar o FlertAI ainda melhor.
+
+📞 **Contato para dúvidas:** 51982066748
 
 ---
 
-**Desenvolvido com ❤️ para o mercado brasileiro**
+### 📱 INSTRUÇÕES PARA TESTADORES ANDROID
 
-*FlertaAI - Transformando conversas em conexões*
+#### ✅ Arquivo APK Disponível:
+- **Link:** `c:\Users\vanze\FlertAI\flerta_ai\build\app\outputs\flutter-apk\app-debug.apk`
+
+#### 📋 Passos para Instalação:
+
+1. **📥 Baixe o Arquivo:**
+   - Clique no link acima ou copie o caminho
+   - Salve o arquivo `.apk` no seu celular
+
+2. **⚙️ Ative Fontes Desconhecidas:**
+   - Vá em: **Configurações > Segurança**
+   - Ative: **"Instalar apps desconhecidos"**
+   - Permita para o navegador/gerenciador de arquivos
+
+3. **📱 Instale o App:**
+   - Abra o arquivo `.apk` baixado
+   - Clique em **"Instalar"**
+   - Aguarde a instalação completar
+   - Abra o **FlertAI**
+
+4. **🔐 Permissões Necessárias:**
+   - **Câmera:** Para tirar fotos de perfil
+   - **Galeria:** Para selecionar imagens
+   - **Internet:** Para conectar com IA
+
+5. **🧪 Primeiro Teste:**
+   - Abra o app
+   - Vá para a segunda página
+   - Selecione uma imagem de perfil
+   - Escolha tom e foco
+   - Gere sugestões de mensagens
+
+📞 **Dúvidas? Contate:** 51982066748
+
+---
+
+### 📱 INSTRUÇÕES PARA TESTADORES IOS
+
+#### ❌ Versão iOS Ainda Não Disponível:
+- Desenvolvimento focado em Android inicialmente
+- iOS será lançado em breve
+
+#### 💡 Alternativas para Teste:
+
+1. **🌐 Teste Via Web:**
+   - Abra: **https://flertai.netlify.app/**
+   - Funciona perfeitamente no **Safari** do iPhone/iPad
+   - Todas funcionalidades disponíveis
+   - Interface responsiva para dispositivos móveis
+
+2. **📱 Simulador (Se Desenvolvedor):**
+   - Use Xcode para build iOS
+   - Código fonte disponível no repositório
+   - Entre em contato para acesso
+
+3. **⏳ Aguarde Lançamento:**
+   - iOS nativo em desenvolvimento
+   - Notificaremos quando disponível
+
+#### 🧪 O que Testar no Web:
+   - Mesmo que Android: análise de imagens
+   - Gere sugestões de mensagens
+   - Teste diferentes tons e focos
+   - Avalie usabilidade mobile
+
+📞 **Dúvidas? Contate:** 51982066748
+
+---
+
+### 🧪 GUIA DE TESTES - O que Verificar
+
+#### 🎯 Funcionalidades Principais:
+
+1. **📸 Análise de Imagens:**
+   - Selecione imagem de perfil
+   - Verifique se IA analisa corretamente
+   - Confirme elementos visuais identificados
+
+2. **💬 Geração de Mensagens:**
+   - Escolha tom (flertar, casual, etc.)
+   - Defina foco se necessário
+   - Gere 3 sugestões
+   - Avalie: Criatividade, naturalidade, contexto
+
+3. **🎨 Interface e Usabilidade:**
+   - Navegação fluida?
+   - Botões responsivos?
+   - Layout adaptado ao dispositivo?
+
+4. **🔧 Performance:**
+   - Tempo de resposta aceitável?
+   - Sem travamentos?
+   - Consumo de bateria/dados ok?
+
+5. **🌍 Cultura Brasileira:**
+   - Mensagens em português brasileiro?
+   - Gírias e expressões naturais?
+   - Contexto cultural apropriado?
+
+#### 📋 Relatório de Bugs:
+   - Descreva o problema detalhadamente
+   - Inclua passos para reproduzir
+   - Envie screenshots se possível
+
+#### ⭐ Avaliação Geral:
+   - O que gostou mais?
+   - O que pode melhorar?
+   - Recomendaria para amigos?
+
+---
+
+### 💡 Dicas Importantes para Testadores
+
+#### 🔒 Segurança e Privacidade:
+   - Suas imagens são processadas localmente
+   - Dados enviados apenas para análise IA
+   - Não armazenamos informações pessoais
+
+#### 📱 Dispositivos Recomendados:
+   - **Android:** Versão 8.0 ou superior
+   - **iOS:** Safari no iPhone/iPad
+   - **Conexão:** Wi-Fi ou 4G para melhor performance
+
+#### 🧪 Cenários de Teste:
+   - Use diferentes tipos de imagens de perfil
+   - Teste todos os tons disponíveis
+   - Varie os focos (se aplicável)
+   - Teste em diferentes horários do dia
+
+#### 📞 Suporte:
+   - Dúvidas técnicas: 51982066748
+   - Bugs ou problemas: Descreva detalhadamente
+   - Sugestões: Sempre bem-vindas!
+
+#### ⏰ Tempo Estimado:
+   - Instalação: 2-5 minutos
+   - Teste completo: 10-15 minutos
+   - Relatório: 5 minutos
+
+#### 🏆 Objetivo do Teste:
+   - Identificar melhorias
+   - Garantir qualidade brasileira
+   - Aperfeiçoar experiência do usuário
+
+**Obrigado por contribuir com o FlertAI! 🇧🇷🚀**
