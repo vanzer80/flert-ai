@@ -1,11 +1,4 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_strings.dart';
-import '../widgets/tone_dropdown.dart';
-import '../widgets/custom_field_modal.dart';
-import '../../servicos/ai_service.dart';
+import 'package:flutter/services.dart';
 
 class AnalysisScreen extends StatefulWidget {
   final String imagePath;
@@ -171,7 +164,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                                     ),
                                     const SizedBox(width: 12),
                                     GestureDetector(
-                                      onTap: () {},
+                                      onTap: () => _copyToClipboard(suggestions.isNotEmpty ? suggestions.first : ''),
                                       child: Container(
                                         width: 30,
                                         height: 30,
@@ -185,7 +178,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                                             ),
                                           ],
                                         ),
-                                        child: const Icon(Icons.edit, size: 16, color: Colors.grey),
+                                        child: const Icon(Icons.content_copy, size: 16, color: Colors.grey),
                                       ),
                                     ),
                                   ],
@@ -495,6 +488,18 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       setState(() { isLoading = false; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Falha ao gerar mais: $e')),
+      );
+    }
+  }
+
+  void _copyToClipboard(String text) async {
+    if (text.isNotEmpty) {
+      await Clipboard.setData(ClipboardData(text: text));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mensagem copiada para a área de transferência!'),
+          duration: Duration(seconds: 2),
+        ),
       );
     }
   }
