@@ -197,12 +197,10 @@ class HomeScreen extends StatelessWidget {
                           height: 35,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(17.5),
-                            gradient: AppColors.primaryGradient,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 20,
+                            image: const DecorationImage(
+                              image: AssetImage('assets/images/profile_karinny.jpg'),
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
