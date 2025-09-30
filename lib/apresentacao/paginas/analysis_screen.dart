@@ -1,4 +1,12 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_strings.dart';
+import '../widgets/tone_dropdown.dart';
+import '../widgets/custom_field_modal.dart';
+import '../../servicos/ai_service.dart';
 
 class AnalysisScreen extends StatefulWidget {
   final String imagePath;
