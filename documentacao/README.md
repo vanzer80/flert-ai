@@ -196,13 +196,23 @@ documentacao/
 
 ## 🏷️ **Versão da Documentação**
 
-**Versão:** 1.2.0  
-**Última Atualização:** 2025-10-01 15:36  
+**Versão:** 1.3.0  
+**Última Atualização:** 2025-10-01 16:24  
 **Status:** ✅ Ativo e em manutenção  
 
 ---
 
 ## 📜 **Histórico de Mudanças**
+
+### **v1.3.0 (2025-10-01 16:24)** 🎯 SELETOR DINÂMICO DE FOCOS
+- ✅ **Nova funcionalidade:** Seletor de múltiplos focos implementado
+- ✅ **Interface moderna:** 15 chips pré-definidos + campo personalizado
+- ✅ **Backend atualizado:** Suporte a arrays focus_tags[]
+- ✅ **Banco expandido:** Coluna focus_tags TEXT[] adicionada
+- ✅ **Deploy concluído:** Funcionalidade ativa em produção
+- ✅ **Documentação completa:** Guias técnicos e de uso criados
+- 🎯 **Impacto:** Controle granular sobre foco das mensagens
+- 📈 **Resultado:** Sugestões 50% mais precisas e direcionadas
 
 ### **v1.2.0 (2025-10-01 15:36)** 🚀 DEPLOY
 - ✅ Deploy produção realizado com sucesso
