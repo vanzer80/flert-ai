@@ -1,0 +1,16 @@
+# Dependências para scripts Python - FlertAI
+# Instalar com: pip install -r requirements.txt
+
+# Supabase client
+supabase==2.3.0
+
+# Análise de dados
+pandas==2.2.0
+numpy==1.26.3
+
+# Geração de relatórios
+matplotlib==3.8.2
+seaborn==0.13.1
+
+# Utilitários
+python-dotenv==1.0.0

@@ -196,13 +196,23 @@ documentacao/
 
 ## 🏷️ **Versão da Documentação**
 
-**Versão:** 1.3.0  
-**Última Atualização:** 2025-10-01 16:24  
+**Versão:** 1.4.0  
+**Última Atualização:** 2025-10-01 16:35  
 **Status:** ✅ Ativo e em manutenção  
 
 ---
 
 ## 📜 **Histórico de Mudanças**
+
+### **v1.4.0 (2025-10-01 16:35)** 📊 SISTEMA DE FEEDBACK
+- ✅ **Nova funcionalidade:** Sistema completo de feedback implementado
+- ✅ **UI de Feedback:** Botões 👍 👎 em cada sugestão
+- ✅ **Banco de dados:** Tabela suggestion_feedback com RLS
+- ✅ **Serviço Flutter:** FeedbackService completo e funcional
+- ✅ **Script Python:** Análise automática de feedbacks
+- ✅ **Relatórios:** Geração automática de insights
+- 🎯 **Objetivo:** Ciclo contínuo de melhoria da IA
+- 📈 **Meta:** +5.000 feedbacks no primeiro mês
 
 ### **v1.3.0 (2025-10-01 16:24)** 🎯 SELETOR DINÂMICO DE FOCOS
 - ✅ **Nova funcionalidade:** Seletor de múltiplos focos implementado

@@ -7,6 +7,7 @@ import '../../core/constants/app_strings.dart';
 import '../widgets/tone_dropdown.dart';
 import '../paginas/focus_selector_screen.dart';
 import '../../servicos/ai_service.dart';
+import '../../servicos/feedback_service.dart';
 
 class AnalysisScreen extends StatefulWidget {
   final String imagePath;
@@ -29,6 +30,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   ];
   bool isLoading = false;
   String? _storageImagePath; // caminho no bucket 'images' (ex.: img_123.jpg)
+  String? _currentConversationId; // ID da conversa atual
+  Map<int, String?> _suggestionFeedbacks = {}; // Armazena feedback por índice
 
   @override
   void initState() {
@@ -120,81 +123,49 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                           const SizedBox(height: 20),
                           _buildFocusInput(),
                           const SizedBox(height: 20),
-                          Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  constraints: const BoxConstraints(maxWidth: 400),
-                                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.9),
-                                    borderRadius: BorderRadius.circular(15),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Text(
-                                    isLoading 
-                                        ? 'Gerando sugestões incríveis para você...' 
-                                        : (suggestions.isNotEmpty ? suggestions.first : 'Para gerar mensagens criativas e envolventes, preciso de informações sobre a imagem de perfil, conversa ou bio da pessoa em questão'),
-                                    style: const TextStyle(fontSize: 16, color: Colors.black87, height: 1.35),
-                                    textAlign: TextAlign.center,
-                                  ),
+                          // Lista de sugestões com feedback ou loading
+                          if (isLoading)
+                            Center(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.all(30),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(15),
                                 ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                                child: const Column(
                                   children: [
-                                    GestureDetector(
-                                      onTap: () {},
-                                      child: Container(
-                                        width: 30,
-                                        height: 30,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.05),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 3),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(Icons.refresh, size: 16, color: Colors.grey),
-                                      ),
+                                    CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentColor),
                                     ),
-                                    const SizedBox(width: 12),
-                                    GestureDetector(
-                                      onTap: () => _copyToClipboard(suggestions.isNotEmpty ? suggestions.first : ''),
-                                      child: Container(
-                                        width: 30,
-                                        height: 30,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.05),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 3),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(Icons.content_copy, size: 16, color: Colors.grey),
-                                      ),
+                                    SizedBox(height: 20),
+                                    Text(
+                                      'Gerando sugestões incríveis para você...',
+                                      style: TextStyle(fontSize: 16, color: Colors.black87),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                          if (!isLoading && suggestions.isNotEmpty)
+                            _buildSuggestionsList(),
+                          if (!isLoading && suggestions.isEmpty)
+                            Center(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: const Text(
+                                  'Para gerar mensagens criativas, faça upload de uma imagem e defina seu foco.',
+                                  style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.35),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
                           const SizedBox(height: 20),
                           _buildGenerateButton(),
                           const SizedBox(height: 10),
@@ -459,7 +430,10 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   }
 
   Future<void> _generateSuggestions() async {
-    setState(() { isLoading = true; });
+    setState(() { 
+      isLoading = true;
+      _suggestionFeedbacks.clear(); // Limpar feedbacks anteriores
+    });
     try {
       final result = await AIService().analyzeImageAndGenerateSuggestions(
         imagePath: _storageImagePath, // se null, função usa modo texto
@@ -467,8 +441,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         focusTags: selectedFocusTags.isEmpty ? null : selectedFocusTags,
       );
       final List<dynamic> list = result['suggestions'] ?? [];
+      final conversationId = result['conversation_id'];
+      
       setState(() {
         suggestions = list.map((e) => e.toString()).toList();
+        if (conversationId != null) {
+          _currentConversationId = conversationId.toString();
+        }
         isLoading = false;
       });
     } catch (e) {
@@ -528,5 +507,208 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         ),
       ),
     );
+  }
+
+  /// Widget para exibir uma sugestão com botões de feedback
+  Widget _buildSuggestionCard(String suggestion, int index) {
+    final feedbackType = _suggestionFeedbacks[index];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Texto da sugestão
+          Text(
+            suggestion,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Barra de ações
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Botões de feedback
+              Row(
+                children: [
+                  // Botão "Gostei"
+                  _buildFeedbackButton(
+                    icon: Icons.thumb_up,
+                    label: 'Gostei',
+                    isSelected: feedbackType == 'like',
+                    color: Colors.green,
+                    onTap: () => _handleFeedback(index, suggestion, 'like'),
+                  ),
+                  const SizedBox(width: 12),
+                  // Botão "Não Gostei"
+                  _buildFeedbackButton(
+                    icon: Icons.thumb_down,
+                    label: 'Não gostei',
+                    isSelected: feedbackType == 'dislike',
+                    color: Colors.red,
+                    onTap: () => _handleFeedback(index, suggestion, 'dislike'),
+                  ),
+                ],
+              ),
+              // Botão copiar
+              IconButton(
+                icon: const Icon(Icons.content_copy, size: 20),
+                color: Colors.grey[600],
+                onPressed: () => _copyToClipboard(suggestion),
+                tooltip: 'Copiar',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Widget para botão de feedback
+  Widget _buildFeedbackButton({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey[300]!,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? color : Colors.grey[600],
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? color : Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Lista todas as sugestões com feedback
+  Widget _buildSuggestionsList() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          // Cabeçalho
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppColors.accentColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.lightbulb_outline,
+                  color: AppColors.accentColor,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${suggestions.length} Sugestões Geradas',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accentColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Lista de sugestões
+          ...suggestions.asMap().entries.map((entry) {
+            return _buildSuggestionCard(entry.value, entry.key);
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  /// Manipula feedback do usuário
+  Future<void> _handleFeedback(
+    int index,
+    String suggestion,
+    String feedbackType,
+  ) async {
+    // Atualizar estado local imediatamente para feedback visual
+    setState(() {
+      _suggestionFeedbacks[index] = feedbackType;
+    });
+
+    // Salvar feedback no backend (assíncrono, não bloqueia UI)
+    if (_currentConversationId != null) {
+      try {
+        final result = await FeedbackService().saveFeedback(
+          conversationId: _currentConversationId!,
+          suggestionText: suggestion,
+          suggestionIndex: index,
+          feedbackType: feedbackType,
+        );
+
+        if (result['success'] == true) {
+          // Feedback visual sutil
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  feedbackType == 'like'
+                      ? '👍 Obrigado pelo feedback positivo!'
+                      : '👎 Obrigado! Vamos melhorar.',
+                ),
+                duration: const Duration(seconds: 2),
+                backgroundColor: feedbackType == 'like'
+                    ? Colors.green
+                    : Colors.orange,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        print('Erro ao salvar feedback: $e');
+        // Falha silenciosa - não impacta UX
+      }
+    }
   }
 }
