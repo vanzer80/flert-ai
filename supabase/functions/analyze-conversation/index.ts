@@ -28,6 +28,7 @@ interface AnalysisRequest {
   user_id?: string
   text?: string
   personalized_instructions?: string  // Instruções personalizadas do aprendizado
+  previous_suggestions?: string[]  // Sugestões anteriores para evitar repetição
 }
 
 interface ConversationSegment {
@@ -73,7 +74,7 @@ serve(async (req) => {
     )
 
     // Parse request body
-    const { image_path, image_base64, tone, focus_tags, focus, user_id, text, personalized_instructions }: AnalysisRequest = await req.json()
+    const { image_path, image_base64, tone, focus_tags, focus, user_id, text, personalized_instructions, previous_suggestions }: AnalysisRequest = await req.json()
 
     // Validate required fields
     if (!tone) {
@@ -276,6 +277,24 @@ Se a imagem contém uma conversa de aplicativo de namoro (Tinder, Bumble, etc.),
     // Adicionar instruções personalizadas do aprendizado do usuário
     if (personalized_instructions) {
       systemPrompt += '\n\n' + personalized_instructions
+    }
+    
+    // Adicionar sugestões anteriores para evitar repetição
+    if (previous_suggestions && previous_suggestions.length > 0) {
+      systemPrompt += `\n\n**⚠️ ATENÇÃO - EVITE REPETIÇÃO:**
+
+Você JÁ gerou estas sugestões anteriormente:
+${previous_suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+
+**INSTRUÇÕES CRÍTICAS:**
+- NÃO repita os mesmos conceitos, palavras-chave ou abordagens das sugestões anteriores
+- NÃO mencione novamente os mesmos elementos visuais já explorados (ex: se já falou de praia, foque em outro aspecto)
+- EXPLORE novos ângulos e aspectos da imagem/conversa que ainda não foram abordados
+- SEJA CRIATIVO e traga perspectivas completamente diferentes
+- Mantenha a qualidade alta, mas com ORIGINALIDADE TOTAL em relação às anteriores
+
+**Exemplo:**
+Se anteriores mencionaram "praia", "sol", "vibe", agora foque em "aventura", "personalidade", "estilo de vida" etc.`
     }
 
     // Prepare messages for OpenAI
@@ -662,10 +681,10 @@ ${hasConversation ? `- **Histórico da Conversa:** Releia cada mensagem e identi
 - **Última Mensagem do Match:** O que foi dito? É uma pergunta? Um comentário? Uma sugestão de plano?
 - **Estilo de Comunicação:** Formal/informal? Usa emojis? É direto ou sutil? Humorado ou sério?
 - **Ganchos para Continuar:** Identifique aberturas naturais (hobbies, lugares, experiências mencionadas)
-- **Dinâmica Atual:** A conversa está fluindo? Precisa de uma virada de energia? Está chegando em convite para encontro?` : `- **Aparência da Pessoa:** Idade aparente, estilo (clássico, moderno, alternativo), características marcantes (cabelo, olhos, sorriso)
+- **Dinâmica Atual:** A conversa está fluindo? Precisa de uma virada de energia? Está chegando em convite para encontro?` : `- **Aparência da Pessoa:** Idade aparente, estilo (clássico, moderno, alternativo), características marcantes que VOCÊ REALMENTE VÊ na imagem (cabelo, olhos, expressão facial, etc.)
 - **Vestuário e Acessórios:** Tipo de roupa, se há marcas, acessórios (óculos, joias, chapéus) que revelem personalidade ou status
 - **Cenário e Ambiente:** Local (praia, montanha, cidade, café, casa), tipo de iluminação, objetos de fundo que indiquem hobbies, viagens, estilo de vida (livros, instrumentos musicais, animais de estimação, obras de arte)
-- **Expressão e Linguagem Corporal:** Sorriso (aberto, misterioso), postura, olhar, que transmitam confiança, alegria, serenidade
+- **Expressão e Linguagem Corporal:** Observe a expressão REAL visível (pode ser sorriso, olhar sério, confiante, etc.), postura, olhar. NÃO invente ou assuma expressões que não estão visíveis na imagem
 - **Textos na Imagem:** Qualquer texto visível (placas, camisetas, legendas) que possa ser usado para contextualizar
 - **Qualidade da Imagem:** Se a foto é profissional, casual, divertida, etc.`}
 
@@ -674,7 +693,7 @@ ${hasConversation ? `- **Histórico da Conversa:** Releia cada mensagem e identi
 - **Português Brasileiro Autêntico:** Use gírias e expressões comuns no Brasil, de forma natural e não forçada. Evite formalidades excessivas
 - **ORIGINALIDADE é a Chave:** Fuja de clichês! A mensagem deve ser única e mostrar que você realmente ${hasConversation ? 'leu e entendeu a conversa' : '"viu" a pessoa na foto'}. Nada de ${hasConversation ? '"legal", "que interessante" ou "tudo bem?"' : '"oi linda" ou "tudo bem?"'}
 - **Priorize Tom, Foco e Nome:**
-${hasName ? `    - **USO DO NOME (PRIORIDADE ALTA):** Utilize o nome "${personName}" de forma natural e amigável em pelo menos uma das mensagens. Ex: "Oi, ${personName}! Adorei seu perfil..." ou "${personName}, seu sorriso ilumina mais que qualquer pôr do sol!"\n` : ''}${hasTone ? '    - APLIQUE RIGOROSAMENTE as instruções de tom fornecidas acima\n' : ''}${hasFocus ? `    - INTEGRE O FOCO "${focus}" de forma criativa e natural em pelo menos uma das mensagens, conectando-o com os elementos visuais da imagem\n` : ''}${!hasTone && !hasFocus && !hasName ? '    - **Cenário de Fallback:** Gere as mensagens com um tom descontraído e casual, utilizando os elementos mais proeminentes da imagem para contextualização, como se você estivesse fazendo uma observação inteligente e espontânea\n' : ''}- **Conexão Genuína:** A mensagem deve criar uma ponte entre o que você observou ${hasConversation ? 'na conversa' : 'na imagem'} e um possível interesse ou elogio${hasConversation ? '. Faça referência específica a algo mencionado na conversa' : '. Se a pessoa está na praia, não diga apenas "gostei da praia", mas "Essa praia parece incrível! Me deu uma vontade de te chamar pra um mergulho por lá... 😉"'}
+${hasName ? `    - **USO DO NOME (PRIORIDADE ALTA):** Utilize o nome "${personName}" de forma natural e amigável em pelo menos uma das mensagens. Ex: "Oi, ${personName}! Adorei seu perfil..." ou "${personName}, seu estilo é incrível!"\n` : ''}${hasTone ? '    - APLIQUE RIGOROSAMENTE as instruções de tom fornecidas acima\n' : ''}${hasFocus ? `    - INTEGRE O FOCO "${focus}" de forma criativa e natural em pelo menos uma das mensagens, conectando-o com os elementos visuais da imagem\n` : ''}${!hasTone && !hasFocus && !hasName ? '    - **Cenário de Fallback:** Gere as mensagens com um tom descontraído e casual, utilizando os elementos mais proeminentes da imagem para contextualização, como se você estivesse fazendo uma observação inteligente e espontânea\n' : ''}- **Conexão Genuína:** A mensagem deve criar uma ponte entre o que você observou ${hasConversation ? 'na conversa' : 'na imagem'} e um possível interesse ou elogio${hasConversation ? '. Faça referência específica a algo mencionado na conversa' : '. Se a pessoa está na praia, não diga apenas "gostei da praia", mas "Essa praia parece incrível! Me deu uma vontade de te chamar pra um mergulho por lá... 😉"'}
 - **Uso de Emojis:** Use emojis de forma sutil e estratégica para adicionar emoção e personalidade, mas sem exageros. Escolha emojis que complementem o tom da mensagem
 - **Respeito Acima de Tudo:** Mesmo em tons sensuais, a mensagem deve ser respeitosa e convidar à interação, nunca ser invasiva ou objetificante
 - **Tamanho e Fluidez:** As sugestões devem ter entre 20 e 40 palavras, permitindo mais naturalidade e criatividade, sem serem excessivamente longas
@@ -690,8 +709,8 @@ function getToneInstructions(tone: string): string {
   const normalizedTone = tone.toLowerCase().trim()
   
   const toneMap: { [key: string]: string } = {
-    '😘 flertar': `**Instruções de Tom:** Flertante e romântico, demonstrando interesse amoroso de forma sutil e charmosa. Use palavras como "encantador(a)", "olhar", "sorriso", "conexão". Emojis sugeridos: 😉✨💖`,
-    'flertar': `**Instruções de Tom:** Flertante e romântico, demonstrando interesse amoroso de forma sutil e charmosa. Use palavras como "encantador(a)", "olhar", "sorriso", "conexão". Emojis sugeridos: 😉✨💖`,
+    '😘 flertar': `**Instruções de Tom:** Flertante e romântico, demonstrando interesse amoroso de forma sutil e charmosa. Use palavras baseadas no que VOCÊ VÊ na imagem como "encantador(a)", "olhar", "estilo", "energia", "conexão". Emojis sugeridos: 😉✨💖`,
+    'flertar': `**Instruções de Tom:** Flertante e romântico, demonstrando interesse amoroso de forma sutil e charmosa. Use palavras baseadas no que VOCÊ VÊ na imagem como "encantador(a)", "olhar", "estilo", "energia", "conexão". Emojis sugeridos: 😉✨💖`,
     '😏 descontraído': `**Instruções de Tom:** Casual e divertido, com um toque de humor e leveza. Use expressões como "que vibe", "curti", "top". Emojis sugeridos: 😂😎✌️`,
     'descontraído': `**Instruções de Tom:** Casual e divertido, com um toque de humor e leveza. Use expressões como "que vibe", "curti", "top". Emojis sugeridos: 😂😎✌️`,
     '😎 casual': `**Instruções de Tom:** Natural e espontâneo, como uma conversa entre amigos. Foque em observações simples e convites abertos. Emojis sugeridos: 👋😊💬`,

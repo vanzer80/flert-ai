@@ -120,10 +120,13 @@ class AIService {
     try {
       // Agora a Edge Function aceita URL absoluta em image_path.
       // Enviamos novamente a imagem para contextualizar as novas sugestões.
+      // CRÍTICO: Enviar previous_suggestions para evitar repetição!
       final response = await _callEdgeFunction('analyze-conversation', {
         'image_path': originalText,
         'tone': tone,
         'focus': focus ?? '',
+        if (previousSuggestions != null && previousSuggestions.isNotEmpty)
+          'previous_suggestions': previousSuggestions,
       });
 
       final List<dynamic> list = response['suggestions'] ?? [];
