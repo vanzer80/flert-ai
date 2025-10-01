@@ -1,0 +1,28 @@
+# =====================================================
+# REQUIREMENTS: Cultural References Scraper
+# Description: Dependencies for web scraping and data insertion
+# =====================================================
+
+# Web Scraping
+beautifulsoup4==4.12.3
+requests==2.31.0
+scrapy==2.11.0
+lxml==5.1.0
+html5lib==1.1
+
+# Data Processing
+pandas==2.2.0
+numpy==1.26.3
+
+# Database
+supabase==2.3.4
+python-dotenv==1.0.1
+
+# Utilities
+fake-useragent==1.4.0
+retry==0.9.2
+tqdm==4.66.1
+
+# Optional: Advanced scraping
+# selenium==4.16.0  # Se precisar de JavaScript rendering
+# playwright==1.41.0  # Alternativa ao Selenium

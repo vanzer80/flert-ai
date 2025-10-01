@@ -4,6 +4,23 @@
 
 FlertaAI é um aplicativo inovador que utiliza inteligência artificial para ajudar usuários a criar mensagens de paquera criativas e envolventes para aplicativos de relacionamento. Desenvolvido especificamente para o mercado brasileiro, o app combina análise de imagens com geração de texto personalizada.
 
+---
+
+## 📚 **Documentação Completa**
+
+**⚠️ IMPORTANTE:** Toda a documentação técnica, guias de setup, manuais de integração e referências do projeto estão centralizados na pasta **`documentacao/`**.
+
+### **📁 Acesse:**
+- 📄 [`documentacao/README.md`](documentacao/README.md) - Índice completo de toda documentação
+- 🚀 [`documentacao/guias/`](documentacao/guias/) - Guias de setup e integração
+- 📊 [`documentacao/auditoria/`](documentacao/auditoria/) - Auditorias e status do projeto
+- 🔧 [`documentacao/troubleshooting/`](documentacao/troubleshooting/) - Resolução de problemas
+- 🛠️ [`documentacao/desenvolvimento/`](documentacao/desenvolvimento/) - Documentação de desenvolvimento
+
+**Para desenvolvedores novos:** Comece por [`documentacao/guias/inicio-rapido/INICIO_RAPIDO.md`](documentacao/guias/inicio-rapido/INICIO_RAPIDO.md)
+
+---
+
 ## 🚀 Funcionalidades Principais
 
 ### 📸 Captura e Análise de Conversa

@@ -41,3 +41,22 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment variables
+.env
+scripts/scraper/.env
+
+# Python
+scripts/scraper/venv/
+scripts/scraper/__pycache__/
+scripts/scraper/*.pyc
+scripts/scraper/.pytest_cache/
+
+# Logs
+scripts/scraper/*.log
+scripts/scraper/scraper.log
+
+# DOCUMENTAÇÃO - NÃO IGNORAR
+# A pasta documentacao/ deve ser versionada
+!documentacao/
+!documentacao/**/*

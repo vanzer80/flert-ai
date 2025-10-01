@@ -7,6 +7,18 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+// Cliente admin para acessar cultural_references (Service Role Key)
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
+
 interface AnalysisRequest {
   image_path?: string
   image_base64?: string
@@ -185,8 +197,12 @@ Foque especialmente em:
       imageDescription += `\n\nContexto adicional de texto/bio: ${text}`
     }
 
-    // Build system prompt with extracted information
-    const systemPrompt = buildSystemPrompt(tone, focus, imageDescription, personName)
+    // NEW: Buscar referências culturais brasileiras
+    const region = await getUserRegion(user_id) // Detecta região do usuário (ou 'nacional')
+    const culturalRefs = await getCulturalReferences(tone, region, 3)
+    
+    // Build system prompt with extracted information + cultural references
+    const systemPrompt = buildEnrichedSystemPrompt(tone, focus, imageDescription, personName, culturalRefs)
 
     // Prepare messages for OpenAI
     const messages: OpenAIMessage[] = [
@@ -319,6 +335,125 @@ Foque especialmente em:
     )
   }
 })
+
+/**
+ * Busca referências culturais relevantes para o contexto
+ */
+async function getCulturalReferences(
+  tone: string,
+  region: string = 'nacional',
+  count: number = 3
+): Promise<any[]> {
+  try {
+    const references = []
+
+    // Determinar tipos relevantes baseado no tom
+    const types = getCulturalTypesForTone(tone)
+
+    // Buscar referências de cada tipo
+    for (const type of types) {
+      const { data, error } = await supabaseAdmin
+        .rpc('get_random_cultural_reference', {
+          reference_type: type,
+          reference_region: region
+        })
+
+      if (data && data.length > 0) {
+        references.push(data[0])
+      }
+      
+      if (references.length >= count) break
+    }
+
+    return references.slice(0, count)
+  } catch (error) {
+    console.error('Error fetching cultural references:', error)
+    return []
+  }
+}
+
+/**
+ * Mapeia tom para tipos de referências culturais apropriadas
+ */
+function getCulturalTypesForTone(tone: string): string[] {
+  const toneNormalized = tone.toLowerCase()
+
+  const toneTypeMap: Record<string, string[]> = {
+    'flertar': ['giria', 'musica', 'expressao_regional'],
+    'descontraído': ['giria', 'meme', 'comida'],
+    'casual': ['giria', 'meme', 'lugar'],
+    'genuíno': ['musica', 'novela', 'personalidade'],
+    'sensual': ['musica', 'giria', 'meme']
+  }
+
+  // Encontrar tipos baseado no tom (com fallback)
+  for (const [key, types] of Object.entries(toneTypeMap)) {
+    if (toneNormalized.includes(key)) {
+      return types
+    }
+  }
+
+  return ['giria', 'meme']  // Default
+}
+
+/**
+ * Detecta região do usuário baseado em perfil ou localização
+ */
+async function getUserRegion(userId: string | undefined): Promise<string> {
+  if (!userId) return 'nacional'
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .select('region')
+      .eq('id', userId)
+      .single()
+
+    if (data && data.region) {
+      return data.region
+    }
+  } catch (error) {
+    console.error('Error fetching user region:', error)
+  }
+
+  return 'nacional'  // Fallback
+}
+
+/**
+ * Constrói system prompt enriquecido com cultura brasileira
+ */
+function buildEnrichedSystemPrompt(
+  tone: string, 
+  focus: string | undefined, 
+  imageDescription: string, 
+  personName: string,
+  culturalRefs: any[]
+): string {
+  // Base prompt (versão existente)
+  let prompt = buildSystemPrompt(tone, focus, imageDescription, personName)
+
+  // Adicionar contexto cultural se disponível
+  if (culturalRefs.length > 0) {
+    prompt += `\n\n**REFERÊNCIAS CULTURAIS BRASILEIRAS:**\n`
+    prompt += `Use estas referências de forma natural e contextualizada:\n\n`
+
+    culturalRefs.forEach((ref, index) => {
+      prompt += `${index + 1}. **${ref.termo}** (${ref.tipo})\n`
+      prompt += `   - Significado: ${ref.significado}\n`
+      prompt += `   - Exemplo: "${ref.exemplo_uso}"\n`
+      prompt += `   - Contexto: ${ref.contexto_flerte}\n\n`
+    })
+
+    prompt += `**INSTRUÇÕES DE USO:**\n`
+    prompt += `- Incorpore naturalmente (não force)\n`
+    prompt += `- Use 1-2 referências por sugestão (máximo)\n`
+    prompt += `- Adapte ao contexto da conversa\n`
+    prompt += `- Mantenha autenticidade brasileira\n`
+    prompt += `- Considere a região se relevante\n`
+  }
+
+  return prompt
+}
 
 function buildSystemPrompt(tone: string, focus: string | undefined, imageDescription: string, personName: string): string {
   const toneInstructions = getToneInstructions(tone)
