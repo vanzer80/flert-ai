@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'user_learning_service.dart';
 
 /// Serviço para gerenciar feedback de sugestões
 class FeedbackService {
@@ -43,6 +44,9 @@ class FeedbackService {
           .insert(feedbackData)
           .select()
           .single();
+
+      // Processar aprendizado do usuário (assíncrono, não bloqueia)
+      _processUserLearning(suggestionText, feedbackType);
 
       return {
         'success': true,
@@ -132,6 +136,27 @@ class FeedbackService {
     } catch (e) {
       print('Erro ao buscar estatísticas: $e');
       return {'likes': 0, 'dislikes': 0, 'total': 0};
+    }
+  }
+
+  /// Processa aprendizado do usuário em background
+  Future<void> _processUserLearning(String suggestionText, String feedbackType) async {
+    try {
+      final learningService = UserLearningService();
+      
+      // Buscar conversation da última análise
+      // Por enquanto, vamos usar tom genérico
+      // TODO: Passar tom e tags da conversa real
+      await learningService.processFeedback(
+        suggestionText: suggestionText,
+        feedbackType: feedbackType,
+        tone: 'Flertar', // Default, idealmente viria do context
+      );
+      
+      print('✅ Aprendizado processado: $feedbackType');
+    } catch (e) {
+      print('⚠️ Erro ao processar aprendizado: $e');
+      // Falha silenciosa - não impacta UX
     }
   }
 }

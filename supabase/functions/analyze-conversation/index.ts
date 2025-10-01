@@ -27,6 +27,7 @@ interface AnalysisRequest {
   focus?: string
   user_id?: string
   text?: string
+  personalized_instructions?: string  // Instruções personalizadas do aprendizado
 }
 
 interface OpenAIMessage {
@@ -60,7 +61,7 @@ serve(async (req) => {
     )
 
     // Parse request body
-    const { image_path, image_base64, tone, focus_tags, focus, user_id, text }: AnalysisRequest = await req.json()
+    const { image_path, image_base64, tone, focus_tags, focus, user_id, text, personalized_instructions }: AnalysisRequest = await req.json()
 
     // Validate required fields
     if (!tone) {
@@ -203,7 +204,12 @@ Foque especialmente em:
     const culturalRefs = await getCulturalReferences(tone, region, 3)
     
     // Build system prompt with extracted information + cultural references
-    const systemPrompt = buildEnrichedSystemPrompt(tone, focus_tags, focus, imageDescription, personName, culturalRefs)
+    let systemPrompt = buildEnrichedSystemPrompt(tone, focus_tags, focus, imageDescription, personName, culturalRefs)
+    
+    // Adicionar instruções personalizadas do aprendizado do usuário
+    if (personalized_instructions) {
+      systemPrompt += '\n\n' + personalized_instructions
+    }
 
     // Prepare messages for OpenAI
     const messages: OpenAIMessage[] = [

@@ -7,6 +7,7 @@ import 'core/tema/app_theme.dart';
 import 'apresentacao/paginas/home_screen.dart';
 import 'apresentacao/paginas/settings_screen.dart';
 import 'servicos/ai_service.dart';
+import 'servicos/user_learning_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,16 @@ void main() async {
   
   // Initialize AI Service
   AIService.initialize();
+  
+  // Initialize User Learning (criar perfil se necessário)
+  try {
+    final learningService = UserLearningService();
+    await learningService.initializeUserProfile();
+    print('✅ Sistema de aprendizado inicializado');
+  } catch (e) {
+    print('⚠️ Erro ao inicializar aprendizado: $e');
+    // Não bloqueia o app se falhar
+  }
   
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

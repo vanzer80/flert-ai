@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants/supabase_config.dart';
+import 'user_learning_service.dart';
 
 class AIService {
   // Singleton pattern
@@ -65,6 +66,10 @@ class AIService {
     List<String>? focusTags,
   }) async {
     try {
+      // Buscar instruções personalizadas do usuário
+      final learningService = UserLearningService();
+      final personalizedInstructions = await learningService.getPersonalizedInstructions();
+      
       // Call Supabase Edge Function for image analysis
       final payload = <String, dynamic>{
         'tone': tone,
@@ -73,6 +78,11 @@ class AIService {
       if (imagePath != null && imagePath.isNotEmpty) {
         payload['image_path'] = imagePath;
       }
+      // Adicionar instruções personalizadas se existirem
+      if (personalizedInstructions.isNotEmpty) {
+        payload['personalized_instructions'] = personalizedInstructions;
+      }
+      
       final response = await _callEdgeFunction('analyze-conversation', payload);
 
       return response;
