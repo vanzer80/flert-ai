@@ -263,7 +263,7 @@ class HomeScreen extends StatelessWidget {
                           _buildMessage(
                             'Que tal uma taça de vinho?',
                             isMe: true,
-                            color: const Color(0xFF007AFF),
+                            color: AppColors.accentColor,
                           ),
                           
                           const SizedBox(height: 6),
