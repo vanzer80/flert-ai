@@ -3,7 +3,7 @@ name: Deploy to Netlify
 on:
   push:
     branches: [main]
-  workflow_dispatch: # Permite execução manual
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -16,25 +16,25 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.0'  # Versão mais recente e estável
+          flutter-version: '3.13.0'
           channel: 'stable'
-          cache: true
-          cache-key: 'flutter-:os:-:channel:-:version:-:arch:-:hash:'  # Cache para dependências
+
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.flutter
+          key: flutter-deps-${{ runner.os }}-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            flutter-deps-${{ runner.os }}-
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Verify Flutter installation
-        run: flutter doctor -v
-
       - name: Build for web
-        run: flutter build web --release --no-tree-shake-icons
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
+        run: |
+          flutter build web --release --no-tree-shake-icons --web-renderer=canvaskit
 
       - name: Install Netlify CLI
         run: npm install -g netlify-cli
@@ -44,15 +44,3 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-
-      - name: Comment on PR (if applicable)
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '🚀 Deploy realizado com sucesso! Aplicativo disponível em: https://flertai.netlify.app/'
-            })
