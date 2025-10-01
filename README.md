@@ -1,27 +1,41 @@
-# FlertaAI 💕
+---
 
-**Aplicativo de paquera com IA focado no mercado brasileiro**
+## 🚀 **Status do Projeto**
 
-FlertaAI é um aplicativo inovador que utiliza inteligência artificial para ajudar usuários a criar mensagens de paquera criativas e envolventes para aplicativos de relacionamento. Desenvolvido especificamente para o mercado brasileiro, o app combina análise de imagens com geração de texto personalizada.
+✅ **Sistema Cultural References:** 97 referências brasileiras ativas  
+✅ **Integração IA:** Enriquecimento automático de prompts  
+✅ **Deploy Automático:** GitHub Actions configurado  
+⏳ **Teste de Secrets:** Em execução...
 
 ---
 
-## 📚 **Documentação Completa**
+## 📋 **Última Atualização**
 
-**⚠️ IMPORTANTE:** Toda a documentação técnica, guias de setup, manuais de integração e referências do projeto estão centralizados na pasta **`documentacao/`**.
-
-### **📁 Acesse:**
-- 📄 [`documentacao/README.md`](documentacao/README.md) - Índice completo de toda documentação
-- 🚀 [`documentacao/guias/`](documentacao/guias/) - Guias de setup e integração
-- 📊 [`documentacao/auditoria/`](documentacao/auditoria/) - Auditorias e status do projeto
-- 🔧 [`documentacao/troubleshooting/`](documentacao/troubleshooting/) - Resolução de problemas
-- 🛠️ [`documentacao/desenvolvimento/`](documentacao/desenvolvimento/) - Documentação de desenvolvimento
-
-**Para desenvolvedores novos:** Comece por [`documentacao/guias/inicio-rapido/INICIO_RAPIDO.md`](documentacao/guias/inicio-rapido/INICIO_RAPIDO.md)
+**Data:** 2025-10-01 11:10  
+**Deploy Automático:** ✅ Configurado  
+**Build Flutter:** ✅ Pronto para produção
 
 ---
 
-## 🚀 Funcionalidades Principais
+## 🎯 **Como Usar**
+
+1. **Acesse:** [FlertAI App](https://flertai.netlify.app/)
+2. **Selecione imagem** de perfil
+3. **Escolha tom** (Flertar, Descontraído, etc.)
+4. **Receba sugestões** com gírias brasileiras autênticas!
+
+---
+
+## 🇧🇷 **Características**
+
+- **Referências Culturais:** Gírias, memes, músicas regionais
+- **Adaptação Regional:** Conteúdo personalizado por localização
+- **IA Enriquecida:** Prompts com contexto brasileiro
+- **Deploy Contínuo:** Atualizações automáticas via GitHub Actions
+
+---
+
+**Desenvolvido com ❤️ para criar conexões autenticamente brasileiras!** ✨
 
 ### 📸 Captura e Análise de Conversa
 - Captura de screenshots de conversas ou fotos de perfil
