@@ -28,7 +28,7 @@ jobs:
         run: flutter doctor -v
 
       - name: Build for web
-        run: flutter build web --release --verbose
+        run: flutter build web --release --no-tree-shake-icons
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
