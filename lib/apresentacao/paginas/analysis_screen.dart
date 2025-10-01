@@ -456,6 +456,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         isLoading = false;
       });
     });
+  }
+
   Future<void> _generateSuggestions() async {
     setState(() { isLoading = true; });
     try {
