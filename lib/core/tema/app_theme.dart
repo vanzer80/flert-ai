@@ -10,6 +10,9 @@ class AppTheme {
         brightness: Brightness.light,
         background: AppColors.backgroundColor,
         surface: AppColors.cardColor,
+        onSurface: AppColors.textPrimary,
+      ).copyWith(
+        surface: AppColors.cardColor,  // Define cor dos cards
       ),
       scaffoldBackgroundColor: AppColors.backgroundColor,
       fontFamily: 'Nunito',
@@ -30,14 +33,7 @@ class AppTheme {
         ),
       ),
       
-      // Card Theme
-      cardTheme: CardThemeData(
-        color: AppColors.cardColor,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
+      // Cards usam ColorScheme por padrão no Material 3
       
       // Elevated Button Theme
       elevatedButtonTheme: ElevatedButtonThemeData(
