@@ -1,0 +1,242 @@
+{
+  "test_suite": "Conversation Segmentation with GPT-4o Vision",
+  "version": "1.0.0",
+  "created_at": "2025-10-01",
+  "total_cases": 10,
+  "target_accuracy": "95%",
+  "description": "Casos de teste para validar segmentação de conversas por autor usando GPT-4o Vision API",
+  
+  "test_cases": [
+    {
+      "id": "TC001",
+      "name": "Conversa Tinder - Alinhamento Padrão",
+      "app": "Tinder",
+      "description": "Screenshot típico do Tinder com mensagens alternadas",
+      "image_characteristics": {
+        "user_messages": "alinhadas à direita, balões azuis",
+        "match_messages": "alinhadas à esquerda, balões brancos/cinzas"
+      },
+      "expected_result": {
+        "has_conversation": true,
+        "min_messages": 4,
+        "author_detection_accuracy": ">=90%"
+      },
+      "validation_criteria": [
+        "Deve identificar corretamente autor de cada mensagem",
+        "Ordem cronológica mantida",
+        "Texto completo extraído sem erros",
+        "Primeira mensagem geralmente é do match"
+      ]
+    },
+    {
+      "id": "TC002",
+      "name": "Conversa Bumble - Padrão Invertido",
+      "app": "Bumble",
+      "description": "Screenshot do Bumble onde mulheres iniciam conversa",
+      "image_characteristics": {
+        "user_messages": "alinhadas à direita, balões amarelos",
+        "match_messages": "alinhadas à esquerda, balões brancos"
+      },
+      "expected_result": {
+        "has_conversation": true,
+        "min_messages": 3,
+        "first_message_author": "match"
+      },
+      "validation_criteria": [
+        "Detectar padrão de cores amarelo/branco",
+        "Primeira mensagem sempre do match (mulher no Bumble)",
+        "Alternância correta de turnos"
+      ]
+    },
+    {
+      "id": "TC003",
+      "name": "Conversa Instagram DM",
+      "app": "Instagram",
+      "description": "DMs do Instagram com padrão visual próprio",
+      "image_characteristics": {
+        "user_messages": "alinhadas à direita, balões azuis/roxos (gradiente)",
+        "match_messages": "alinhadas à esquerda, cinza claro"
+      },
+      "expected_result": {
+        "has_conversation": true,
+        "min_messages": 2,
+        "author_detection_accuracy": ">=85%"
+      },
+      "validation_criteria": [
+        "Reconhecer gradiente azul/roxo como user",
+        "Timestamps podem estar visíveis",
+        "Avatares podem influenciar detecção"
+      ]
+    },
+    {
+      "id": "TC004",
+      "name": "Conversa Longa - 10+ Mensagens",
+      "app": "Diversos",
+      "description": "Screenshot com conversa extensa (scrollback)",
+      "image_characteristics": {
+        "total_messages": ">=10",
+        "complexity": "alta"
+      },
+      "expected_result": {
+        "has_conversation": true,
+        "min_messages": 10,
+        "author_detection_accuracy": ">=90%",
+        "max_processing_time_ms": 3000
+      },
+      "validation_criteria": [
+        "Performance não degradar com mensagens longas",
+        "Manter precisão em conversas extensas",
+        "Não perder mensagens no meio"
+      ]
+    },
+    {
+      "id": "TC005",
+      "name": "Perfil Simples - Sem Conversa",
+      "app": "N/A",
+      "description": "Foto de perfil regular sem mensagens",
+      "image_characteristics": {
+        "content": "apenas foto de perfil",
+        "no_chat_ui": true
+      },
+      "expected_result": {
+        "has_conversation": false,
+        "conversation_segments": [],
+        "should_fallback_to": "profile_analysis"
+      },
+      "validation_criteria": [
+        "Não deve alucinar mensagens inexistentes",
+        "Retornar array vazio em conversa_segmentada",
+        "Continuar com análise de perfil normal"
+      ]
+    },
+    {
+      "id": "TC006",
+      "name": "Conversa com Emojis e Mídia",
+      "app": "WhatsApp/Diversos",
+      "description": "Mensagens contendo emojis, GIFs, stickers",
+      "image_characteristics": {
+        "content_types": ["text", "emoji", "sticker", "gif_preview"],
+        "complexity": "média-alta"
+      },
+      "expected_result": {
+        "has_conversation": true,
+        "min_messages": 3,
+        "emoji_detection": true
+      },
+      "validation_criteria": [
+        "Emojis devem ser transcritos corretamente",
+        "Stickers/GIFs podem ser descritos como '[sticker]' ou '[gif]'",
+        "Autor ainda identificado corretamente"
+      ]
+    },
+    {
+      "id": "TC007",
+      "name": "Primeira Mensagem - Ice Breaker",
+      "app": "Tinder/Bumble",
+      "description": "Screenshot mostrando apenas primeira mensagem enviada",
+      "image_characteristics": {
+        "total_messages": 1,
+        "context": "início de conversa"
+      },
+      "expected_result": {
+        "has_conversation": true,
+        "message_count": 1,
+        "author": "match"
+      },
+      "validation_criteria": [
+        "Detectar mesmo com apenas 1 mensagem",
+        "Identificar quem iniciou (geralmente match)",
+        "Sugestões devem ser respostas apropriadas"
+      ]
+    },
+    {
+      "id": "TC008",
+      "name": "Conversa com Timestamps Visíveis",
+      "app": "Diversos",
+      "description": "Screenshot com horários/datas visíveis nas mensagens",
+      "image_characteristics": {
+        "timestamps": true,
+        "date_markers": "possível"
+      },
+      "expected_result": {
+        "has_conversation": true,
+        "min_messages": 2,
+        "timestamp_info_extracted": "opcional"
+      },
+      "validation_criteria": [
+        "Timestamps não devem ser confundidos com mensagens",
+        "Data não interfere na segmentação de autor",
+        "Ordem cronológica respeitada"
+      ]
+    },
+    {
+      "id": "TC009",
+      "name": "Conversa Multi-idioma",
+      "app": "Diversos",
+      "description": "Mensagens em português com algumas palavras em inglês/espanhol",
+      "image_characteristics": {
+        "languages": ["pt-BR", "en", "es"],
+        "mixed_content": true
+      },
+      "expected_result": {
+        "has_conversation": true,
+        "min_messages": 3,
+        "language_detection": "pt-BR predominante"
+      },
+      "validation_criteria": [
+        "OCR preciso em múltiplos idiomas",
+        "Não perder contexto por mudança de idioma",
+        "Autor ainda identificado corretamente"
+      ]
+    },
+    {
+      "id": "TC010",
+      "name": "Conversa com Match Verificado",
+      "app": "Tinder/Bumble",
+      "description": "Screenshot mostrando badge de verificação ao lado do nome",
+      "image_characteristics": {
+        "verification_badge": true,
+        "profile_name_visible": true
+      },
+      "expected_result": {
+        "has_conversation": true,
+        "min_messages": 2,
+        "name_detected": true
+      },
+      "validation_criteria": [
+        "Badge de verificação não interfere em OCR",
+        "Nome do match extraído corretamente",
+        "Segmentação por autor mantém precisão"
+      ]
+    }
+  ],
+  
+  "performance_metrics": {
+    "max_latency_vision_api_ms": 2000,
+    "max_total_processing_ms": 4000,
+    "target_accuracy_percentage": 95,
+    "acceptable_accuracy_percentage": 90
+  },
+  
+  "error_scenarios": {
+    "low_quality_image": {
+      "description": "Imagem com baixa resolução ou desfocada",
+      "expected_behavior": "Melhor esforço, fallback gracioso se necessário"
+    },
+    "partial_screenshot": {
+      "description": "Screenshot cortado mostrando apenas parte da conversa",
+      "expected_behavior": "Processar mensagens visíveis, não alucinar conteúdo"
+    },
+    "overlapping_ui_elements": {
+      "description": "Elementos de UI do app sobrepostos às mensagens",
+      "expected_behavior": "Ignorar elementos de UI, focar em mensagens"
+    }
+  },
+  
+  "success_criteria": {
+    "overall_accuracy": ">=95% em detecção de autor",
+    "false_positive_rate": "<5% (não alucinar conversas)",
+    "processing_time": "<4 segundos end-to-end",
+    "context_errors": "Redução de 80% em erros de contexto vs baseline"
+  }
+}

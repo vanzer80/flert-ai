@@ -30,6 +30,18 @@ interface AnalysisRequest {
   personalized_instructions?: string  // Instruções personalizadas do aprendizado
 }
 
+interface ConversationSegment {
+  autor: 'user' | 'match'
+  texto: string
+}
+
+interface VisionAnalysisResult {
+  nome_da_pessoa_detectado: string
+  descricao_visual: string
+  texto_extraido_ocr?: string
+  conversa_segmentada?: ConversationSegment[]
+}
+
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant'
   content: string | Array<{
@@ -101,9 +113,10 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured')
     }
 
-    // Extract detailed image information including person's name
+    // Extract detailed image information including person's name and conversation segmentation
     let imageDescription = 'Nenhuma imagem fornecida'
     let personName = 'Nenhum'
+    let conversationSegments: ConversationSegment[] = []
 
     if (image_base64 || image_path) {
       let imageUrl = ''
@@ -125,20 +138,51 @@ serve(async (req) => {
       }
 
       if (imageUrl) {
-        // Step 1: Extract detailed information from image using GPT-4o Vision
-        const visionPrompt = `Analise esta imagem de perfil em detalhes e retorne as informações no seguinte formato JSON:
+        // Step 1: Extract detailed information from image using GPT-4o Vision with conversation segmentation
+        const visionPrompt = `Analise esta imagem com EXTREMA ATENÇÃO ao layout visual e retorne as informações no seguinte formato JSON:
+
 {
   "nome_da_pessoa_detectado": "[Nome da pessoa se visível na imagem, caso contrário 'Nenhum']",
   "descricao_visual": "[Descrição detalhada da aparência, vestuário, cenário, expressão, objetos visíveis]",
-  "texto_extraido_ocr": "[Qualquer texto visível na imagem: nome de usuário, legendas, placas, camisetas]"
+  "texto_extraido_ocr": "[Qualquer texto visível na imagem: nome de usuário, legendas, placas, camisetas]",
+  "conversa_segmentada": [
+    {"autor": "match", "texto": "Mensagem do match"},
+    {"autor": "user", "texto": "Sua mensagem"},
+    {"autor": "match", "texto": "Outra mensagem do match"}
+  ]
 }
 
-Foque especialmente em:
-- Identificar o NOME da pessoa se estiver visível (em username, legenda, texto na imagem)
-- Aparência física e estilo
+**INSTRUÇÕES CRÍTICAS PARA SEGMENTAÇÃO DE CONVERSA:**
+
+Se a imagem contém uma conversa de aplicativo de namoro (Tinder, Bumble, etc.), identifique CADA mensagem e seu autor baseado em:
+
+1. **LAYOUT VISUAL:**
+   - Mensagens alinhadas à DIREITA geralmente são do USUÁRIO (user)
+   - Mensagens alinhadas à ESQUERDA geralmente são do MATCH (match)
+   
+2. **CORES E DESIGN:**
+   - Balões azuis/verdes escuros = user
+   - Balões brancos/cinzas claros = match
+   - Analise o padrão de cores consistente
+
+3. **CONTEXTO E PADRÕES:**
+   - Primeira mensagem geralmente é do match (quem iniciou)
+   - Alternância natural de turnos
+   - Analise timestamps se visíveis
+
+4. **FORMATO DE SAÍDA:**
+   - Liste TODAS as mensagens visíveis na ordem cronológica
+   - Cada objeto deve ter "autor" ("user" ou "match") e "texto" (mensagem completa)
+   - Se não houver conversa, deixe array vazio: []
+
+**OUTRAS INFORMAÇÕES:**
+- Identifique o NOME da pessoa se estiver visível (em username, legenda, texto na imagem)
+- Descreva aparência física, vestuário e estilo
 - Cenário e ambiente
 - Objetos que indiquem hobbies ou interesses
-- Qualquer texto visível na imagem`
+- Qualquer texto visível na imagem
+
+**IMPORTANTE:** Retorne APENAS o JSON válido, sem texto adicional antes ou depois.`
 
         const visionMessages: OpenAIMessage[] = [
           {
@@ -160,8 +204,9 @@ Foque especialmente em:
             body: JSON.stringify({
               model: 'gpt-4o',
               messages: visionMessages,
-              max_tokens: 500,
-              temperature: 0.3,
+              max_tokens: 1000,  // Aumentado para acomodar conversas segmentadas
+              temperature: 0.2,  // Reduzido para maior precisão na segmentação
+              response_format: { type: "json_object" }  // Força resposta JSON
             }),
           })
 
@@ -169,17 +214,41 @@ Foque especialmente em:
             const visionData = await visionResponse.json()
             const visionResult = visionData.choices[0]?.message?.content || ''
             
-            // Try to parse JSON response
+            // Parse JSON response
             try {
-              const parsedVision = JSON.parse(visionResult)
+              // Remove markdown code blocks if present
+              const cleanedResult = visionResult.replace(/```json\n?|```\n?/g, '').trim()
+              const parsedVision: VisionAnalysisResult = JSON.parse(cleanedResult)
+              
+              // Extract all information
               personName = parsedVision.nome_da_pessoa_detectado || 'Nenhum'
               const visualDesc = parsedVision.descricao_visual || ''
               const ocrText = parsedVision.texto_extraido_ocr || ''
+              
+              // Build description
               imageDescription = `Descrição Visual: ${visualDesc}\n\nTexto Extraído (OCR): ${ocrText}`
-            } catch {
-              // If JSON parsing fails, use the raw response
+              
+              // Extract conversation segments if available
+              if (parsedVision.conversa_segmentada && Array.isArray(parsedVision.conversa_segmentada) && parsedVision.conversa_segmentada.length > 0) {
+                conversationSegments = parsedVision.conversa_segmentada
+                
+                // Add conversation context to description
+                const conversationText = conversationSegments
+                  .map(seg => `[${seg.autor.toUpperCase()}]: ${seg.texto}`)
+                  .join('\n')
+                
+                imageDescription += `\n\n**CONVERSA SEGMENTADA:**\n${conversationText}`
+                
+                console.log(`✅ Conversa segmentada detectada: ${conversationSegments.length} mensagens`)
+              }
+            } catch (parseError) {
+              console.error('Erro ao parsear resposta JSON do Vision:', parseError)
+              console.log('Resposta original:', visionResult)
+              
+              // Fallback: usar resposta bruta
               imageDescription = visionResult
-              // Try to extract name from the response text
+              
+              // Tentar extrair nome manualmente
               const nameMatch = visionResult.match(/nome[:\s]+([\w\s]+)/i)
               if (nameMatch) {
                 personName = nameMatch[1].trim()
@@ -308,7 +377,7 @@ Foque especialmente em:
       }
     }
 
-    // Return successful response
+    // Return successful response with conversation segments
     const response = {
       success: true,
       suggestions,
@@ -316,9 +385,12 @@ Foque especialmente em:
       tone,
       focus,
       focus_tags,
+      conversation_segments: conversationSegments,  // Novo campo
+      has_conversation: conversationSegments.length > 0,  // Flag indicadora
       usage_info: {
         model_used: image_base64 || image_path ? 'gpt-4o' : 'gpt-4o-mini',
-        tokens_used: openaiData.usage?.total_tokens || 0
+        tokens_used: openaiData.usage?.total_tokens || 0,
+        vision_capabilities: 'conversation_segmentation_enabled'
       }
     }
 
@@ -487,6 +559,9 @@ function buildSystemPrompt(tone: string, focus: string | undefined, imageDescrip
   const hasFocus = focus && focus.toLowerCase() !== 'nenhum'
   const hasName = personName && personName.toLowerCase() !== 'nenhum'
   
+  // Detectar se há conversa segmentada
+  const hasConversation = imageDescription.includes('**CONVERSA SEGMENTADA:**')
+  
   const toneSection = hasTone 
     ? `**Tom Escolhido pelo Usuário:** ${tone}\n${toneInstructions}\n` 
     : `**Tom Escolhido pelo Usuário:** Nenhum (use tom descontraído e casual por padrão)\n`
@@ -499,27 +574,53 @@ function buildSystemPrompt(tone: string, focus: string | undefined, imageDescrip
     ? `**Nome da Pessoa Detectado:** ${personName}\n`
     : `**Nome da Pessoa Detectado:** Nenhum\n`
   
-  return `Você é o FlertAI, um cupido digital super observador e com um talento nato para criar mensagens de paquera autênticas e irresistíveis, focadas no mercado brasileiro. Sua missão é ajudar as pessoas a quebrar o gelo e iniciar conversas genuínas, como se um amigo próximo e divertido estivesse dando uma forcinha.
+  // Seção específica para conversas
+  const conversationSection = hasConversation 
+    ? `\n**⚠️ ATENÇÃO ESPECIAL - CONVERSA DETECTADA:**
+A imagem contém uma conversa de aplicativo de namoro já em andamento. As mensagens foram segmentadas por autor (USER = você, MATCH = a outra pessoa).
 
-Sua tarefa é analisar a imagem de perfil fornecida com olhos de águia, extraindo cada detalhe visual e textual que possa inspirar uma conexão. Use essas observações para criar mensagens de paquera personalizadas, criativas e que soem 100% humanas.
+**INSTRUÇÕES CRÍTICAS PARA CONTEXTO DE CONVERSA:**
+- **ANALISE O FLUXO:** Leia toda a conversa para entender o contexto, humor, e estágio do relacionamento
+- **CONTINUIDADE NATURAL:** Suas sugestões devem dar continuidade lógica à última mensagem do MATCH
+- **REFERÊNCIAS CONTEXTUAIS:** Mencione algo específico da conversa anterior (um hobby mencionado, uma piada feita, um plano sugerido)
+- **EVITE REPETIÇÃO:** Não repita tópicos já exauridos na conversa. Traga algo novo mas relacionado
+- **LEIA O INTERESSE:** Se o MATCH está animado e engajado, mantenha a energia. Se está mais reservado, seja mais sutil
+- **TIMING:** Se foi mencionado um evento/plano, pergunte sobre isso. Se houve uma pergunta não respondida, responda primeiro
+- **PERSONALIZAÇÃO EXTREMA:** Use o contexto da conversa para criar mensagens que APENAS você poderia enviar (nada genérico!)
+
+**EXEMPLO DE BOA CONTINUIDADE:**
+Se MATCH disse: "Adoro viajar, acabei de voltar da Bahia"
+❌ RUIM: "Que legal! Você é bonita"
+✅ BOM: "Bahia é incrível! Qual foi o lugar que mais te marcou lá? Já fui em Morro de SP e quero conhecer mais do Nordeste 🌴"
+
+` 
+    : ''
+  
+  return `Você é o FlertAI, um cupido digital super observador e com um talento nato para criar mensagens de paquera autênticas e irresistíveis, focadas no mercado brasileiro. Sua missão é ajudar as pessoas a quebrar o gelo ${hasConversation ? 'e dar continuidade natural a conversas em andamento' : 'e iniciar conversas genuínas'}, como se um amigo próximo e divertido estivesse dando uma forcinha.
+
+Sua tarefa é analisar ${hasConversation ? 'a conversa fornecida' : 'a imagem de perfil fornecida'} com olhos de águia, extraindo cada detalhe ${hasConversation ? 'contextual e emocional' : 'visual e textual'} que possa inspirar uma conexão. Use essas observações para criar mensagens de paquera personalizadas, criativas e que soem 100% humanas.
 
 **Informações Fornecidas:**
 - **Descrição Detalhada da Imagem:** ${imageDescription}
-${nameSection}${toneSection}${focusSection}
-**Elementos Visuais e Contextuais a Analisar Detalhadamente:**
-- **Aparência da Pessoa:** Idade aparente, estilo (clássico, moderno, alternativo), características marcantes (cabelo, olhos, sorriso)
+${nameSection}${toneSection}${focusSection}${conversationSection}
+**Elementos ${hasConversation ? 'Contextuais' : 'Visuais'} a Analisar Detalhadamente:**
+${hasConversation ? `- **Histórico da Conversa:** Releia cada mensagem e identifique tópicos, interesses mencionados, tom emocional
+- **Última Mensagem do Match:** O que foi dito? É uma pergunta? Um comentário? Uma sugestão de plano?
+- **Estilo de Comunicação:** Formal/informal? Usa emojis? É direto ou sutil? Humorado ou sério?
+- **Ganchos para Continuar:** Identifique aberturas naturais (hobbies, lugares, experiências mencionadas)
+- **Dinâmica Atual:** A conversa está fluindo? Precisa de uma virada de energia? Está chegando em convite para encontro?` : `- **Aparência da Pessoa:** Idade aparente, estilo (clássico, moderno, alternativo), características marcantes (cabelo, olhos, sorriso)
 - **Vestuário e Acessórios:** Tipo de roupa, se há marcas, acessórios (óculos, joias, chapéus) que revelem personalidade ou status
 - **Cenário e Ambiente:** Local (praia, montanha, cidade, café, casa), tipo de iluminação, objetos de fundo que indiquem hobbies, viagens, estilo de vida (livros, instrumentos musicais, animais de estimação, obras de arte)
 - **Expressão e Linguagem Corporal:** Sorriso (aberto, misterioso), postura, olhar, que transmitam confiança, alegria, serenidade
 - **Textos na Imagem:** Qualquer texto visível (placas, camisetas, legendas) que possa ser usado para contextualizar
-- **Qualidade da Imagem:** Se a foto é profissional, casual, divertida, etc.
+- **Qualidade da Imagem:** Se a foto é profissional, casual, divertida, etc.`}
 
 **Instruções para a Criação das Mensagens:**
 - **Seja um Cupido Moderno:** Sua voz deve ser amigável, um pouco atrevida (se o tom permitir), e sempre positiva. Pense como alguém que realmente quer ver a pessoa feliz
 - **Português Brasileiro Autêntico:** Use gírias e expressões comuns no Brasil, de forma natural e não forçada. Evite formalidades excessivas
-- **ORIGINALIDADE é a Chave:** Fuja de clichês! A mensagem deve ser única e mostrar que você realmente "viu" a pessoa na foto. Nada de "oi linda" ou "tudo bem?"
+- **ORIGINALIDADE é a Chave:** Fuja de clichês! A mensagem deve ser única e mostrar que você realmente ${hasConversation ? 'leu e entendeu a conversa' : '"viu" a pessoa na foto'}. Nada de ${hasConversation ? '"legal", "que interessante" ou "tudo bem?"' : '"oi linda" ou "tudo bem?"'}
 - **Priorize Tom, Foco e Nome:**
-${hasName ? `    - **USO DO NOME (PRIORIDADE ALTA):** Utilize o nome "${personName}" de forma natural e amigável em pelo menos uma das mensagens. Ex: "Oi, ${personName}! Adorei seu perfil..." ou "${personName}, seu sorriso ilumina mais que qualquer pôr do sol!"\n` : ''}${hasTone ? '    - APLIQUE RIGOROSAMENTE as instruções de tom fornecidas acima\n' : ''}${hasFocus ? `    - INTEGRE O FOCO "${focus}" de forma criativa e natural em pelo menos uma das mensagens, conectando-o com os elementos visuais da imagem\n` : ''}${!hasTone && !hasFocus && !hasName ? '    - **Cenário de Fallback:** Gere as mensagens com um tom descontraído e casual, utilizando os elementos mais proeminentes da imagem para contextualização, como se você estivesse fazendo uma observação inteligente e espontânea\n' : ''}- **Conexão Genuína:** A mensagem deve criar uma ponte entre o que você observou na imagem e um possível interesse ou elogio. Se a pessoa está na praia, não diga apenas "gostei da praia", mas "Essa praia parece incrível! Me deu uma vontade de te chamar pra um mergulho por lá... 😉"
+${hasName ? `    - **USO DO NOME (PRIORIDADE ALTA):** Utilize o nome "${personName}" de forma natural e amigável em pelo menos uma das mensagens. Ex: "Oi, ${personName}! Adorei seu perfil..." ou "${personName}, seu sorriso ilumina mais que qualquer pôr do sol!"\n` : ''}${hasTone ? '    - APLIQUE RIGOROSAMENTE as instruções de tom fornecidas acima\n' : ''}${hasFocus ? `    - INTEGRE O FOCO "${focus}" de forma criativa e natural em pelo menos uma das mensagens, conectando-o com os elementos visuais da imagem\n` : ''}${!hasTone && !hasFocus && !hasName ? '    - **Cenário de Fallback:** Gere as mensagens com um tom descontraído e casual, utilizando os elementos mais proeminentes da imagem para contextualização, como se você estivesse fazendo uma observação inteligente e espontânea\n' : ''}- **Conexão Genuína:** A mensagem deve criar uma ponte entre o que você observou ${hasConversation ? 'na conversa' : 'na imagem'} e um possível interesse ou elogio${hasConversation ? '. Faça referência específica a algo mencionado na conversa' : '. Se a pessoa está na praia, não diga apenas "gostei da praia", mas "Essa praia parece incrível! Me deu uma vontade de te chamar pra um mergulho por lá... 😉"'}
 - **Uso de Emojis:** Use emojis de forma sutil e estratégica para adicionar emoção e personalidade, mas sem exageros. Escolha emojis que complementem o tom da mensagem
 - **Respeito Acima de Tudo:** Mesmo em tons sensuais, a mensagem deve ser respeitosa e convidar à interação, nunca ser invasiva ou objetificante
 - **Tamanho e Fluidez:** As sugestões devem ter entre 20 e 40 palavras, permitindo mais naturalidade e criatividade, sem serem excessivamente longas

@@ -32,6 +32,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   String? _storageImagePath; // caminho no bucket 'images' (ex.: img_123.jpg)
   String? _currentConversationId; // ID da conversa atual
   Map<int, String?> _suggestionFeedbacks = {}; // Armazena feedback por índice
+  bool _hasConversation = false; // Indica se há conversa segmentada detectada
+  List<Map<String, dynamic>> _conversationSegments = []; // Segmentos da conversa
 
   @override
   void initState() {
@@ -148,6 +150,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                                 ),
                               ),
                             ),
+                          // Exibir conversa segmentada se detectada
+                          if (_hasConversation && _conversationSegments.isNotEmpty)
+                            _buildConversationPreview(),
                           if (!isLoading && suggestions.isNotEmpty)
                             _buildSuggestionsList(),
                           if (!isLoading && suggestions.isEmpty)
@@ -443,13 +448,32 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       final List<dynamic> list = result['suggestions'] ?? [];
       final conversationId = result['conversation_id'];
       
+      // Processar novos campos de conversa segmentada
+      final hasConversation = result['has_conversation'] ?? false;
+      final List<dynamic> segments = result['conversation_segments'] ?? [];
+      
       setState(() {
         suggestions = list.map((e) => e.toString()).toList();
         if (conversationId != null) {
           _currentConversationId = conversationId.toString();
         }
+        
+        // Atualizar dados de conversa
+        _hasConversation = hasConversation;
+        _conversationSegments = segments
+            .map((seg) => {
+                  'autor': seg['autor']?.toString() ?? 'unknown',
+                  'texto': seg['texto']?.toString() ?? '',
+                })
+            .toList();
+        
         isLoading = false;
       });
+      
+      // Log para debug
+      if (_hasConversation && _conversationSegments.isNotEmpty) {
+        debugPrint('✅ Conversa detectada: ${_conversationSegments.length} mensagens');
+      }
     } catch (e) {
       setState(() { isLoading = false; });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -706,9 +730,162 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
           }
         }
       } catch (e) {
-        print('Erro ao salvar feedback: $e');
+        debugPrint('Erro ao salvar feedback: $e');
         // Falha silenciosa - não impacta UX
       }
     }
+  }
+
+  /// Widget para exibir preview da conversa segmentada detectada
+  Widget _buildConversationPreview() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppColors.accentColor.withOpacity(0.3), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentColor.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cabeçalho
+          Row(
+            children: [
+              Icon(Icons.chat_bubble_outline, color: AppColors.accentColor, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Conversa Detectada',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.accentColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_conversationSegments.length} msgs',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accentColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          
+          // Mensagens (máximo 4 para preview)
+          ..._conversationSegments.take(4).map((segment) {
+            final isUser = segment['autor'] == 'user';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Indicador de autor
+                  Container(
+                    width: 50,
+                    child: Text(
+                      isUser ? 'VOCÊ:' : 'MATCH:',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isUser ? Colors.blue[700] : Colors.pink[700],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Mensagem
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isUser 
+                            ? Colors.blue[50] 
+                            : Colors.pink[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isUser 
+                              ? Colors.blue[200]! 
+                              : Colors.pink[200]!,
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        segment['texto'] ?? '',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black87,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          
+          // Indicador se há mais mensagens
+          if (_conversationSegments.length > 4)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Center(
+                child: Text(
+                  '+ ${_conversationSegments.length - 4} mensagens...',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ),
+          
+          const SizedBox(height: 8),
+          // Nota informativa
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'As sugestões abaixo consideram o contexto desta conversa',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.blue[900],
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
