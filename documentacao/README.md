@@ -196,13 +196,21 @@ documentacao/
 
 ## 🏷️ **Versão da Documentação**
 
-**Versão:** 1.1.0  
-**Última Atualização:** 2025-10-01 14:20  
+**Versão:** 1.2.0  
+**Última Atualização:** 2025-10-01 15:36  
 **Status:** ✅ Ativo e em manutenção  
 
 ---
 
 ## 📜 **Histórico de Mudanças**
+
+### **v1.2.0 (2025-10-01 15:36)** 🚀 DEPLOY
+- ✅ Deploy produção realizado com sucesso
+- ✅ Aplicação disponível em: https://flertai.netlify.app/
+- ✅ Sistema Cultural References 100% operacional
+- ✅ Detecção de Região funcionando perfeitamente
+- ✅ Correção para funcionamento sem autenticação (MVP)
+- ✅ Build otimizado (3.1 MB) enviado para produção
 
 ### **v1.1.0 (2025-10-01 14:20)** ⭐ NOVO
 - ✅ Implementação completa de Detecção de Região

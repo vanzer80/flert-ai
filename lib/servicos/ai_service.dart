@@ -62,13 +62,13 @@ class AIService {
   Future<Map<String, dynamic>> analyzeImageAndGenerateSuggestions({
     String? imagePath,
     required String tone,
-    String? focus,
+    List<String>? focusTags,
   }) async {
     try {
       // Call Supabase Edge Function for image analysis
       final payload = <String, dynamic>{
         'tone': tone,
-        'focus': focus ?? '',
+        'focus_tags': focusTags ?? [],
       };
       if (imagePath != null && imagePath.isNotEmpty) {
         payload['image_path'] = imagePath;

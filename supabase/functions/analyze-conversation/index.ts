@@ -23,6 +23,7 @@ interface AnalysisRequest {
   image_path?: string
   image_base64?: string
   tone: string
+  focus_tags?: string[]
   focus?: string
   user_id?: string
   text?: string
@@ -59,7 +60,7 @@ serve(async (req) => {
     )
 
     // Parse request body
-    const { image_path, image_base64, tone, focus, user_id, text }: AnalysisRequest = await req.json()
+    const { image_path, image_base64, tone, focus_tags, focus, user_id, text }: AnalysisRequest = await req.json()
 
     // Validate required fields
     if (!tone) {
@@ -202,7 +203,7 @@ Foque especialmente em:
     const culturalRefs = await getCulturalReferences(tone, region, 3)
     
     // Build system prompt with extracted information + cultural references
-    const systemPrompt = buildEnrichedSystemPrompt(tone, focus, imageDescription, personName, culturalRefs)
+    const systemPrompt = buildEnrichedSystemPrompt(tone, focus_tags, focus, imageDescription, personName, culturalRefs)
 
     // Prepare messages for OpenAI
     const messages: OpenAIMessage[] = [
@@ -263,6 +264,7 @@ Foque especialmente em:
             analysis_result: {
               tone,
               focus,
+              focus_tags,
               ai_response: aiResponse,
               suggestions,
               timestamp: new Date().toISOString()
@@ -307,6 +309,7 @@ Foque especialmente em:
       conversation_id: conversationId,
       tone,
       focus,
+      focus_tags,
       usage_info: {
         model_used: image_base64 || image_path ? 'gpt-4o' : 'gpt-4o-mini',
         tokens_used: openaiData.usage?.total_tokens || 0
@@ -424,6 +427,7 @@ async function getUserRegion(userId: string | undefined): Promise<string> {
  */
 function buildEnrichedSystemPrompt(
   tone: string, 
+  focusTags: string[] | undefined, 
   focus: string | undefined, 
   imageDescription: string, 
   personName: string,
@@ -450,6 +454,22 @@ function buildEnrichedSystemPrompt(
     prompt += `- Adapte ao contexto da conversa\n`
     prompt += `- Mantenha autenticidade brasileira\n`
     prompt += `- Considere a região se relevante\n`
+  }
+
+  // Adicionar múltiplos focos/tags se fornecidos
+  if (focusTags && focusTags.length > 0) {
+    prompt += `\n\n**FOCOS/TAGS SELECIONADOS PELO USUÁRIO:**\n`
+    prompt += `Considere estes focos na criação das mensagens:\n\n`
+
+    focusTags.forEach((tag, index) => {
+      prompt += `${index + 1}. ${tag}\n`
+    })
+
+    prompt += `\n**INSTRUÇÕES PARA FOCOS:**\n`
+    prompt += `- Integre os focos de forma natural e criativa\n`
+    prompt += `- Use múltiplos focos quando fizer sentido (não force)\n`
+    prompt += `- Cada mensagem deve destacar pelo menos um foco relevante\n`
+    prompt += `- Combine focos complementares quando possível\n`
   }
 
   return prompt

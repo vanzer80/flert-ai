@@ -38,32 +38,23 @@ class AppStrings {
   static const String outdoorAdventures = 'Aventuras ao ar livre';
   static const String favoriteTravelSpots = 'Lugares favoritos para viajar';
   
-  // Sugestões rápidas de foco (PT-BR)
+  // Sugestões rápidas de foco (PT-BR) - Agora com múltiplas opções
   static const List<String> focusQuickChips = [
-    'Academia',
-    'Pets',
-    'Café',
-    'Música',
-    'Filmes',
-    'Séries',
-    'Livros',
-    'Viagens',
-    'Gastronomia',
-    'Receitas',
-    'Drinks/Cerveja',
-    'Vinhos',
-    'Praia',
-    'Montanha',
-    'Natureza',
-    'Fotografia',
-    'Trabalho/Carreira',
-    'Estudos',
-    'Tecnologia',
-    'Games',
-    'Arte',
-    'Moda',
-    'Esportes',
-    'Yoga/Meditação',
+    'Humor',
+    'Interesse em hobbies',
+    'Sugestão de encontro',
+    'Elogio',
+    'Pergunta aberta',
+    'Referência cultural',
+    'Compartilhar experiência',
+    'Convidar para conversa',
+    'Mostrar interesse',
+    'Quebrar o gelo',
+    'Estilo pessoal',
+    'Ambiente/local',
+    'Humor e leveza',
+    'Profundidade emocional',
+    'Conexão imediata',
   ];
   
   // Menu/Configurações

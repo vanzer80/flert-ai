@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../widgets/tone_dropdown.dart';
-import '../widgets/custom_field_modal.dart';
+import '../paginas/focus_selector_screen.dart';
 import '../../servicos/ai_service.dart';
 
 class AnalysisScreen extends StatefulWidget {
@@ -22,6 +22,7 @@ class AnalysisScreen extends StatefulWidget {
 
 class _AnalysisScreenState extends State<AnalysisScreen> {
   String selectedTone = AppStrings.flirtTone;
+  List<String> selectedFocusTags = [];
   final TextEditingController _focusController = TextEditingController();
   List<String> suggestions = [
     'Tenho que admitir, você fica muito fofo com esse maiô'
@@ -357,7 +358,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         width: double.infinity,
         margin: const EdgeInsets.symmetric(horizontal: 16),
         child: InkWell(
-          onTap: () => _showCustomFieldModal(context),
+          onTap: () => _showFocusSelector(),
           borderRadius: BorderRadius.circular(25),
           child: Container(
             width: double.infinity,
@@ -455,15 +456,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         isLoading = false;
       });
     });
-  }
-
   Future<void> _generateSuggestions() async {
     setState(() { isLoading = true; });
     try {
       final result = await AIService().analyzeImageAndGenerateSuggestions(
         imagePath: _storageImagePath, // se null, função usa modo texto
         tone: selectedTone,
-        focus: _focusController.text.isEmpty ? null : _focusController.text,
+        focusTags: selectedFocusTags.isEmpty ? null : selectedFocusTags,
       );
       final List<dynamic> list = result['suggestions'] ?? [];
       setState(() {
@@ -512,13 +511,20 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     }
   }
 
-  void _showCustomFieldModal(BuildContext context) {
-    showCustomFieldModal(
-      context,
-      onFocusSelected: (focus) {
-        _focusController.text = focus;
-        _generateSuggestions();
-      },
+  void _showFocusSelector() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => FocusSelectorScreen(
+          initialSelectedTags: selectedFocusTags,
+          onTagsSelected: (tags) {
+            setState(() {
+              selectedFocusTags = tags;
+              _focusController.text = tags.join(', ');
+            });
+            _generateSuggestions();
+          },
+        ),
+      ),
     );
   }
 }
