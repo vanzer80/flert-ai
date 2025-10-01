@@ -196,13 +196,24 @@ documentacao/
 
 ## 🏷️ **Versão da Documentação**
 
-**Versão:** 1.4.0  
-**Última Atualização:** 2025-10-01 16:35  
+**Versão:** 1.5.0  
+**Última Atualização:** 2025-10-01 17:28  
 **Status:** ✅ Ativo e em manutenção  
 
 ---
 
 ## 📜 **Histórico de Mudanças**
+
+### **v1.5.0 (2025-10-01 17:28)** 🧠 APRENDIZADO AUTOMÁTICO PERSONALIZADO
+- ✅ **Nova funcionalidade:** Sistema de aprendizado automático por usuário
+- ✅ **Identificação única:** Device ID gerado automaticamente (sem login)
+- ✅ **Banco de dados:** 3 novas tabelas (user_profiles, user_preferences, learning_events)
+- ✅ **Serviços Flutter:** DeviceIdService + UserLearningService
+- ✅ **IA Personalizada:** Instruções customizadas por usuário
+- ✅ **Aprendizado em tempo real:** Feedbacks atualizam preferências automaticamente
+- ✅ **Memória da IA:** good_examples e bad_examples armazenados
+- 🎯 **Objetivo:** IA aprende com cada usuário individualmente
+- 📈 **Meta:** +30% like_rate após 20 feedbacks por usuário
 
 ### **v1.4.0 (2025-10-01 16:35)** 📊 SISTEMA DE FEEDBACK
 - ✅ **Nova funcionalidade:** Sistema completo de feedback implementado
