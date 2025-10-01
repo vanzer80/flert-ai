@@ -232,14 +232,9 @@ Se a imagem contém uma conversa de aplicativo de namoro (Tinder, Bumble, etc.),
               if (parsedVision.conversa_segmentada && Array.isArray(parsedVision.conversa_segmentada) && parsedVision.conversa_segmentada.length > 0) {
                 conversationSegments = parsedVision.conversa_segmentada
                 
-                // Add conversation context to description
-                const conversationText = conversationSegments
-                  .map(seg => `[${seg.autor.toUpperCase()}]: ${seg.texto}`)
-                  .join('\n')
+                console.log(`✅ Conversa segmentada detectada: ${conversationSegments.length} mensagens totais`)
                 
-                imageDescription += `\n\n**CONVERSA SEGMENTADA:**\n${conversationText}`
-                
-                console.log(`✅ Conversa segmentada detectada: ${conversationSegments.length} mensagens`)
+                // Não adicionar ao imageDescription - será tratado separadamente no system prompt
               }
             } catch (parseError) {
               console.error('Erro ao parsear resposta JSON do Vision:', parseError)
@@ -272,8 +267,11 @@ Se a imagem contém uma conversa de aplicativo de namoro (Tinder, Bumble, etc.),
     const region = await getUserRegion(user_id) // Detecta região do usuário (ou 'nacional')
     const culturalRefs = await getCulturalReferences(tone, region, 3)
     
-    // Build system prompt with extracted information + cultural references
-    let systemPrompt = buildEnrichedSystemPrompt(tone, focus_tags, focus, imageDescription, personName, culturalRefs)
+    // Extrair histórico de conversa (últimas 3-5 mensagens)
+    const conversationHistory = extractConversationHistory(conversationSegments, 5)
+    
+    // Build system prompt with extracted information + cultural references + conversation history
+    let systemPrompt = buildEnrichedSystemPrompt(tone, focus_tags, focus, imageDescription, personName, culturalRefs, conversationHistory)
     
     // Adicionar instruções personalizadas do aprendizado do usuário
     if (personalized_instructions) {
@@ -385,7 +383,8 @@ Se a imagem contém uma conversa de aplicativo de namoro (Tinder, Bumble, etc.),
       tone,
       focus,
       focus_tags,
-      conversation_segments: conversationSegments,  // Novo campo
+      conversation_segments: conversationSegments,  // Todas as mensagens
+      conversation_history_used: conversationHistory,  // Últimas 3-5 usadas no prompt
       has_conversation: conversationSegments.length > 0,  // Flag indicadora
       usage_info: {
         model_used: image_base64 || image_path ? 'gpt-4o' : 'gpt-4o-mini',
@@ -509,10 +508,11 @@ function buildEnrichedSystemPrompt(
   focus: string | undefined, 
   imageDescription: string, 
   personName: string,
-  culturalRefs: any[]
+  culturalRefs: any[],
+  conversationHistory: ConversationSegment[] = []
 ): string {
-  // Base prompt (versão existente)
-  let prompt = buildSystemPrompt(tone, focus, imageDescription, personName)
+  // Base prompt (versão existente) + conversation history
+  let prompt = buildSystemPrompt(tone, focus, imageDescription, personName, conversationHistory)
 
   // Adicionar contexto cultural se disponível
   if (culturalRefs.length > 0) {
@@ -553,14 +553,68 @@ function buildEnrichedSystemPrompt(
   return prompt
 }
 
-function buildSystemPrompt(tone: string, focus: string | undefined, imageDescription: string, personName: string): string {
+/**
+ * Extrai as últimas N mensagens da conversa para contexto
+ */
+function extractConversationHistory(
+  segments: ConversationSegment[],
+  maxMessages: number = 5
+): ConversationSegment[] {
+  if (!segments || segments.length === 0) return []
+  
+  // Pegar as últimas N mensagens (mais recentes)
+  const recent = segments.slice(-maxMessages)
+  
+  console.log(`📝 Histórico extraído: ${recent.length} de ${segments.length} mensagens`)
+  return recent
+}
+
+/**
+ * Formata histórico de conversa para inclusão no prompt
+ */
+function formatConversationHistory(history: ConversationSegment[]): string {
+  if (!history || history.length === 0) return ''
+  
+  const formatted = history.map((seg, index) => {
+    const isLast = index === history.length - 1
+    const marker = isLast ? '👉' : '  '
+    const label = seg.autor === 'user' ? 'VOCÊ' : 'MATCH'
+    return `${marker} [${label}]: "${seg.texto}"`
+  }).join('\n')
+  
+  return formatted
+}
+
+function buildSystemPrompt(
+  tone: string,
+  focus: string | undefined,
+  imageDescription: string,
+  personName: string,
+  conversationHistory: ConversationSegment[] = []
+): string {
   const toneInstructions = getToneInstructions(tone)
   const hasTone = tone && tone.toLowerCase() !== 'nenhum'
   const hasFocus = focus && focus.toLowerCase() !== 'nenhum'
   const hasName = personName && personName.toLowerCase() !== 'nenhum'
   
   // Detectar se há conversa segmentada
-  const hasConversation = imageDescription.includes('**CONVERSA SEGMENTADA:**')
+  const hasConversation = conversationHistory.length > 0
+  
+  // Formatar histórico de conversa se disponível
+  let conversationHistorySection = ''
+  if (hasConversation) {
+    const formattedHistory = formatConversationHistory(conversationHistory)
+    const lastMessage = conversationHistory[conversationHistory.length - 1]
+    const isMatchLast = lastMessage.autor === 'match'
+    
+    conversationHistorySection = `\n**📱 HISTÓRICO RECENTE DA CONVERSA (${conversationHistory.length} últimas mensagens):**
+
+${formattedHistory}
+
+${isMatchLast ? `**⚠️ ÚLTIMA MENSAGEM DO MATCH:** "${lastMessage.texto}"
+**SUA TAREFA:** Gerar 3 respostas criativas e contextualizadas para ESTA mensagem.` : `**ℹ️ CONTEXTO:** Use este histórico para entender o contexto da conversa em andamento.`}
+`
+  }
   
   const toneSection = hasTone 
     ? `**Tom Escolhido pelo Usuário:** ${tone}\n${toneInstructions}\n` 
@@ -602,7 +656,7 @@ Sua tarefa é analisar ${hasConversation ? 'a conversa fornecida' : 'a imagem de
 
 **Informações Fornecidas:**
 - **Descrição Detalhada da Imagem:** ${imageDescription}
-${nameSection}${toneSection}${focusSection}${conversationSection}
+${nameSection}${toneSection}${focusSection}${conversationHistorySection}${conversationSection}
 **Elementos ${hasConversation ? 'Contextuais' : 'Visuais'} a Analisar Detalhadamente:**
 ${hasConversation ? `- **Histórico da Conversa:** Releia cada mensagem e identifique tópicos, interesses mencionados, tom emocional
 - **Última Mensagem do Match:** O que foi dito? É uma pergunta? Um comentário? Uma sugestão de plano?
