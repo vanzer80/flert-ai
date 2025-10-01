@@ -65,6 +65,11 @@ documentacao/
 - **Para:** Integrar referências culturais com Edge Function
 - **Objetivo:** Enriquecer sugestões de IA
 
+### **Detecção de Região** ⭐ NOVO
+- 📄 [`desenvolvimento/IMPLEMENTACAO_DETECCAO_REGIAO.md`](desenvolvimento/IMPLEMENTACAO_DETECCAO_REGIAO.md)
+- **Para:** Sistema de regionalização de referências culturais
+- **Objetivo:** Personalizar sugestões por região do Brasil (6 regiões)
+
 ---
 
 ## 📊 **Documentação Técnica**
@@ -72,6 +77,7 @@ documentacao/
 ### **Auditoria e Status**
 - 📄 [`auditoria/AUDITORIA_COMPLETA.md`](auditoria/AUDITORIA_COMPLETA.md) - Stack técnica completa
 - 📄 [`auditoria/STATUS_FINAL.md`](auditoria/STATUS_FINAL.md) - Status atual do projeto
+- 📄 [`desenvolvimento/STATUS_TAREFA_CULTURAL_REFERENCES.md`](desenvolvimento/STATUS_TAREFA_CULTURAL_REFERENCES.md) - Status sistema cultural
 
 ### **Troubleshooting**
 - 📄 [`troubleshooting/CORRECAO_ERRO_STATS.md`](troubleshooting/CORRECAO_ERRO_STATS.md) - Correção função SQL
@@ -190,13 +196,22 @@ documentacao/
 
 ## 🏷️ **Versão da Documentação**
 
-**Versão:** 1.0.0  
-**Última Atualização:** 2025-10-01  
+**Versão:** 1.1.0  
+**Última Atualização:** 2025-10-01 14:20  
 **Status:** ✅ Ativo e em manutenção  
 
 ---
 
 ## 📜 **Histórico de Mudanças**
+
+### **v1.1.0 (2025-10-01 14:20)** ⭐ NOVO
+- ✅ Implementação completa de Detecção de Região
+- ✅ Novo documento: `IMPLEMENTACAO_DETECCAO_REGIAO.md`
+- ✅ Atualização: `STATUS_TAREFA_CULTURAL_REFERENCES.md`
+- ✅ 6 regiões disponíveis (Nacional, Norte, Nordeste, Centro-Oeste, Sudeste, Sul)
+- ✅ Frontend + Backend integrados
+- ✅ Tela ProfileSettingsScreen criada
+- ✅ Migration SQL aplicada no Supabase
 
 ### **v1.0.0 (2025-10-01)**
 - ✅ Criação da estrutura de documentação

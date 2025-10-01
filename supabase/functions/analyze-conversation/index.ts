@@ -9,8 +9,8 @@ const corsHeaders = {
 
 // Cliente admin para acessar cultural_references (Service Role Key)
 const supabaseAdmin = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  Deno.env.get('URL_SUPABASE') ?? '',
+  Deno.env.get('SERVICE_ROLE_KEY_supabase') ?? '',
   {
     auth: {
       autoRefreshToken: false,
@@ -49,8 +49,8 @@ serve(async (req) => {
   try {
     // Initialize Supabase client
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('URL_SUPABASE') ?? '',
+      Deno.env.get('ANON_KEY_SUPABASE') ?? '',
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },

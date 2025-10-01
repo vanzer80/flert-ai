@@ -161,6 +161,23 @@ class SupabaseService {
         .eq('id', userId);
   }
 
+  // Region methods
+  Future<String?> getUserRegion(String userId) async {
+    try {
+      final profile = await getUserProfile(userId);
+      return profile?['region'] as String?;
+    } catch (e) {
+      return 'nacional'; // Fallback
+    }
+  }
+
+  Future<void> updateUserRegion(String userId, String region) async {
+    await _client
+        .from('profiles')
+        .update({'region': region})
+        .eq('id', userId);
+  }
+
   // Real-time subscriptions
   RealtimeChannel subscribeToUserConversations(
     String userId,

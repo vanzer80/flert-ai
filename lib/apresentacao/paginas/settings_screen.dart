@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import 'profile_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -206,6 +207,13 @@ class SettingsScreen extends StatelessWidget {
       case SettingsItemType.language:
         _showLanguageDialog(context);
         break;
+      case SettingsItemType.region:
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const ProfileSettingsScreen(),
+          ),
+        );
+        break;
       case SettingsItemType.upgradePro:
         _showUpgradeDialog(context);
         break;
@@ -378,6 +386,12 @@ class SettingsScreen extends StatelessWidget {
       type: SettingsItemType.language,
     ),
     SettingsItem(
+      icon: Icons.location_on,
+      title: 'Região',
+      type: SettingsItemType.region,
+      iconColor: AppColors.error,
+    ),
+    SettingsItem(
       icon: Icons.workspace_premium,
       title: AppStrings.upgradeToPro,
       type: SettingsItemType.upgradePro,
@@ -433,6 +447,7 @@ enum SettingsItemType {
   helpGrow,
   textSupport,
   language,
+  region,
   upgradePro,
   referrals,
   logout,
