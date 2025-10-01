@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/supabase_config.dart';
 
 class SupabaseService {
@@ -176,6 +177,21 @@ class SupabaseService {
         .from('profiles')
         .update({'region': region})
         .eq('id', userId);
+  }
+
+  // Region methods (local storage for MVP without auth)
+  Future<String> getUserRegionLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('user_region') ?? 'nacional';
+    } catch (e) {
+      return 'nacional';
+    }
+  }
+
+  Future<void> updateUserRegionLocal(String region) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_region', region);
   }
 
   // Real-time subscriptions

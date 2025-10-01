@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../servicos/supabase_service.dart';
 
 /// Tela de configurações de perfil do usuário
@@ -60,14 +61,22 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
 
     try {
       final userId = _supabaseService.currentUser?.id;
+      
       if (userId != null) {
+        // Usuário autenticado: buscar do Supabase
         final region = await _supabaseService.getUserRegion(userId);
         setState(() {
           _selectedRegion = region ?? 'nacional';
           _isLoading = false;
         });
       } else {
-        setState(() => _isLoading = false);
+        // Sem autenticação: buscar do armazenamento local
+        final prefs = await SharedPreferences.getInstance();
+        final region = prefs.getString('user_region') ?? 'nacional';
+        setState(() {
+          _selectedRegion = region;
+          _isLoading = false;
+        });
       }
     } catch (e) {
       setState(() {
@@ -78,16 +87,19 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   }
 
   Future<void> _saveRegion() async {
-    final userId = _supabaseService.currentUser?.id;
-    if (userId == null) {
-      _showSnackBar('Erro: Usuário não autenticado', isError: true);
-      return;
-    }
-
     setState(() => _isSaving = true);
 
     try {
-      await _supabaseService.updateUserRegion(userId, _selectedRegion);
+      final userId = _supabaseService.currentUser?.id;
+      
+      if (userId != null) {
+        // Usuário autenticado: salvar no Supabase
+        await _supabaseService.updateUserRegion(userId, _selectedRegion);
+      } else {
+        // Sem autenticação: salvar localmente (MVP)
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_region', _selectedRegion);
+      }
       
       if (mounted) {
         _showSnackBar('Região salva com sucesso! ✅');
