@@ -5,8 +5,9 @@
 # Deploy: Use Netlify Drop (drag build/web folder) or connect to Git
 
 [build]
-  # Build command for Flutter Web on Netlify (downloads Flutter SDK and builds)
-  command = "bash ./scripts/netlify_build.sh"
+  # Manual deployment: build locally with 'flutter build web --release --no-tree-shake-icons'
+  # Then drag build/web folder to Netlify or use Netlify CLI
+  # No build command to avoid submodule/environment issues on Netlify CI
   publish = "build/web"
 
 # Security headers
