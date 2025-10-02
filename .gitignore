@@ -31,6 +31,9 @@ migrate_working_dir/
 .pub/
 /build/
 
+# Do not version the Flutter SDK (we download it in CI/Netlify)
+/flutter/
+
 # Symbolication related
 app.*.symbols
 

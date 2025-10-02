@@ -5,8 +5,8 @@
 # Deploy: Use Netlify Drop (drag build/web folder) or connect to Git
 
 [build]
-  # No build command - manual deployment of pre-built files
-  # To deploy: flutter build web locally, then drag build/web to https://app.netlify.com/drop
+  # Build command for Flutter Web on Netlify (downloads Flutter SDK and builds)
+  command = "bash ./scripts/netlify_build.sh"
   publish = "build/web"
 
 # Security headers
