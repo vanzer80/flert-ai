@@ -13,6 +13,7 @@ const supabaseAdmin = createClient(
   Deno.env.get('SERVICE_ROLE_KEY_supabase') ?? '',
   {
     auth: {
+      autoRefreshToken: false,
       persistSession: false
     }
   }
@@ -28,11 +29,11 @@ interface AnalysisRequest {
   text?: string
   personalized_instructions?: string  // Instruções personalizadas do aprendizado
   previous_suggestions?: string[]  // Sugestões anteriores para evitar repetição
-  skip_vision?: boolean  // Se true, pula análise de visão e usa contexto fornecido
-  vision_context?: {  // Contexto da visão quando skip_vision é true
-    personName: string
-    imageDescription: string
-    conversationSegments: ConversationSegment[]
+}
+
+interface ConversationSegment {
+  autor: 'user' | 'match'
+  texto: string
 }
 
 interface VisionAnalysisResult {
@@ -73,7 +74,7 @@ serve(async (req) => {
     )
 
     // Parse request body
-    const { image_path, image_base64, tone, focus_tags, focus, user_id, text, personalized_instructions, previous_suggestions, skip_vision, vision_context }: AnalysisRequest = await req.json()
+    const { image_path, image_base64, tone, focus_tags, focus, user_id, text, personalized_instructions, previous_suggestions }: AnalysisRequest = await req.json()
 
     // Validate required fields
     if (!tone) {
@@ -118,13 +119,7 @@ serve(async (req) => {
     let personName = 'Nenhum'
     let conversationSegments: ConversationSegment[] = []
 
-    // Se skip_vision for true, usar contexto fornecido em vez de analisar imagem
-    if (skip_vision && vision_context) {
-      console.log('✅ Usando contexto de visão fornecido (skip_vision=true)')
-      personName = vision_context.personName
-      imageDescription = vision_context.imageDescription
-      conversationSegments = vision_context.conversationSegments
-    } else if (image_base64 || image_path) {
+    if (image_base64 || image_path) {
       let imageUrl = ''
       
       if (image_base64) {
@@ -188,7 +183,7 @@ Se a imagem contém uma conversa de aplicativo de namoro (Tinder, Bumble, etc.),
 - Objetos que indiquem hobbies ou interesses
 - Qualquer texto visível na imagem
 
-**IMPORTANTE:** Retorne **apenas** o JSON acima, **sem qualquer explicação ou texto adicional** fora do formato especificado.`
+**IMPORTANTE:** Retorne APENAS o JSON válido, sem texto adicional antes ou depois.`
 
         const visionMessages: OpenAIMessage[] = [
           {
@@ -310,7 +305,7 @@ Se anteriores mencionaram "praia", "sol", "vibe", agora foque em "aventura", "pe
       },
       {
         role: 'user',
-        content: 'Gere apenas 1 sugestão de mensagem criativa e envolvente seguindo todas as instruções do sistema, utilizando as informações da imagem e o nome da pessoa se disponível.'
+        content: 'Gere 3 sugestões de mensagens criativas e envolventes seguindo todas as instruções do sistema, utilizando as informações da imagem e o nome da pessoa se disponível.'
       }
     ]
 
@@ -364,8 +359,6 @@ Se anteriores mencionaram "praia", "sol", "vibe", agora foque em "aventura", "pe
               focus_tags,
               ai_response: aiResponse,
               suggestions,
-              conversation_segments: conversationSegments, // NOVO: Salvar segmentos detectados
-              has_conversation: conversationSegments.length > 0,
               timestamp: new Date().toISOString()
             }
           })
@@ -388,26 +381,12 @@ Se anteriores mencionaram "praia", "sol", "vibe", agora foque em "aventura", "pe
             .from('suggestions')
             .insert(suggestionInserts)
 
-          // NOVO: Salvar segmentos de conversa em tabela separada para análise
-          if (conversationSegments.length > 0) {
-            const segmentInserts = conversationSegments.map((segment, index) => ({
-              conversation_id: conversationId,
-              segment_index: index,
-              autor: segment.autor,
-              texto: segment.texto,
-              created_at: new Date().toISOString()
-            }))
-
-            const { error: segError } = await supabaseClient
-              .from('conversation_segments')
-              .insert(segmentInserts)
-
-            if (segError) {
-              console.error('Error saving conversation segments:', segError)
-            } else {
-              console.log(`✅ Salvou ${conversationSegments.length} segmentos de conversa`)
-            }
+          if (sugError) {
+            console.error('Error saving suggestions:', sugError)
           }
+
+          // Increment daily usage
+          await supabaseClient.rpc('increment_daily_usage', { user_id })
         }
       } catch (dbError) {
         console.error('Database error:', dbError)
@@ -432,6 +411,7 @@ Se anteriores mencionaram "praia", "sol", "vibe", agora foque em "aventura", "pe
         vision_capabilities: 'conversation_segmentation_enabled'
       }
     }
+
     return new Response(
       JSON.stringify(response),
       { 
@@ -616,7 +596,7 @@ function formatConversationHistory(history: ConversationSegment[]): string {
   
   const formatted = history.map((seg, index) => {
     const isLast = index === history.length - 1
-    const marker = isLast ? '👉' : '  '
+    const marker = isLast ? '->' : '  '
     const label = seg.autor === 'user' ? 'VOCÊ' : 'MATCH'
     return `${marker} [${label}]: "${seg.texto}"`
   }).join('\n')
@@ -713,56 +693,68 @@ ${hasConversation ? `- **Histórico da Conversa:** Releia cada mensagem e identi
 - **Português Brasileiro Autêntico:** Use gírias e expressões comuns no Brasil, de forma natural e não forçada. Evite formalidades excessivas
 - **ORIGINALIDADE é a Chave:** Fuja de clichês! A mensagem deve ser única e mostrar que você realmente ${hasConversation ? 'leu e entendeu a conversa' : '"viu" a pessoa na foto'}. Nada de ${hasConversation ? '"legal", "que interessante" ou "tudo bem?"' : '"oi linda" ou "tudo bem?"'}
 - **Priorize Tom, Foco e Nome:**
-${hasName ? `    - **USO DO NOME (PRIORIDADE ALTA):** Utilize o nome "${personName}" de forma natural e amigável em pelo menos uma das mensagens. Ex: "Oi, ${personName}! Adorei seu perfil..." ou "${personName}, seu estilo é incrível!"\n` : ''}${hasTone ? '    - APLIQUE RIGOROSAMENTE as instruções de tom fornecidas acima\n' : ''}${hasFocus ? `    - INTEGRE O FOCO "${focus}" de forma criativa e natural em pelo menos uma das mensagens, conectando-o com os elementos visuais da imagem\n` : ''}${!hasTone && !hasFocus && !hasName ? '    - **Cenário de Fallback:** Gere as mensagens com um tom descontraído e casual, utilizando os elementos mais proeminentes da imagem para contextualização, como se você estivesse fazendo uma observação inteligente e espontânea\n' : ''}- **Conexão Genuína:** Crie uma ponte entre algo observado ${hasConversation ? 'na conversa' : 'na imagem'} e um elogio ou pergunta envolvente. Evite frases genéricas do tipo "que legal" ou "tudo bem?".
-- **Uso de Emojis:** ${hasTone && tone.toLowerCase().includes('descontraído') ? 'Use um emoji **somente se** combinar com o tom descontraído (ex: 😉), caso contrário prefira texto puro.' : 'Evite usar emojis na mensagem final, a menos que o contexto peça muito; foco em texto autêntico.'}
+${hasName ? `    - **USO DO NOME (PRIORIDADE ALTA):** Utilize o nome "${personName}" de forma natural e amigável em pelo menos uma das mensagens. Ex: "Oi, ${personName}! Adorei seu perfil..." ou "${personName}, seu estilo é incrível!"\n` : ''}${hasTone ? '    - APLIQUE RIGOROSAMENTE as instruções de tom fornecidas acima\n' : ''}${hasFocus ? `    - INTEGRE O FOCO "${focus}" de forma criativa e natural em pelo menos uma das mensagens, conectando-o com os elementos visuais da imagem\n` : ''}${!hasTone && !hasFocus && !hasName ? '    - **Cenário de Fallback:** Gere as mensagens com um tom descontraído e casual, utilizando os elementos mais proeminentes da imagem para contextualização, como se você estivesse fazendo uma observação inteligente e espontânea\n' : ''}- **Conexão Genuína:** A mensagem deve criar uma ponte entre o que você observou ${hasConversation ? 'na conversa' : 'na imagem'} e um possível interesse ou elogio${hasConversation ? '. Faça referência específica a algo mencionado na conversa' : '. Se a pessoa está na praia, não diga apenas "gostei da praia", mas "Essa praia parece incrível! Me deu uma vontade de te chamar pra um mergulho por lá... 😉"'}
+- **Uso de Emojis:** Não use emojis nas mensagens. Mantenha as mensagens sem emojis para um tom mais sério e profissional
 - **Respeito Acima de Tudo:** Mesmo em tons sensuais, a mensagem deve ser respeitosa e convidar à interação, nunca ser invasiva ou objetificante
-- **Tamanho e Fluidez:** A sugestão deve ter entre 20 e 40 palavras, permitindo mais naturalidade e criatividade, sem serem excessivamente longas
-- **Gere exatamente 1 sugestão**
+- **Tamanho e Fluidez:** As sugestões devem ter entre 20 e 40 palavras, permitindo mais naturalidade e criatividade, sem serem excessivamente longas
+- **Gere exatamente 3 sugestões numeradas**
 
 **Formato de Saída Obrigatório:**
-Forneça apenas o texto da mensagem sugerida, sem nenhuma numeração ou formatação adicional (apenas a frase da sugestão).`
+1. [Mensagem criativa e contextualizada]
+2. [Mensagem criativa e contextualizada]
+3. [Mensagem criativa e contextualizada]`
 }
 
 function getToneInstructions(tone: string): string {
   const normalizedTone = tone.toLowerCase().trim()
   
   const toneMap: { [key: string]: string } = {
-    '😘 flertar': `**Instruções de Tom:** Flertante e romântico, demonstrando interesse amoroso de forma sutil e charmosa. Use palavras baseadas no que VOCÊ VÊ na imagem como "encantador(a)", "olhar", "estilo", "energia", "conexão". Emojis sugeridos: 😉✨💖`,
-    'flertar': `**Instruções de Tom:** Flertante e romântico, demonstrando interesse amoroso de forma sutil e charmosa. Use palavras baseadas no que VOCÊ VÊ na imagem como "encantador(a)", "olhar", "estilo", "energia", "conexão". Emojis sugeridos: 😉✨💖`,
-    '😏 descontraído': `**Instruções de Tom:** Casual e divertido, com um toque de humor e leveza. Use expressões como "que vibe", "curti", "top". Emojis sugeridos: 😂😎✌️`,
-    'descontraído': `**Instruções de Tom:** Casual e divertido, com um toque de humor e leveza. Use expressões como "que vibe", "curti", "top". Emojis sugeridos: 😂😎✌️`,
-    '😎 casual': `**Instruções de Tom:** Natural e espontâneo, como uma conversa entre amigos. Foque em observações simples e convites abertos. Emojis sugeridos: 👋😊💬`,
-    'casual': `**Instruções de Tom:** Natural e espontâneo, como uma conversa entre amigos. Foque em observações simples e convites abertos. Emojis sugeridos: 👋😊💬`,
-    '💬 genuíno': `**Instruções de Tom:** Autêntico e profundo, mostrando interesse real na pessoa e em seus hobbies/paixões. Use palavras como "interessante", "curiosidade", "apaixonado(a)". Emojis sugeridos: 🤔💡❤️`,
-    'genuíno': `**Instruções de Tom:** Autêntico e profundo, mostrando interesse real na pessoa e em seus hobbies/paixões. Use palavras como "interessante", "curiosidade", "apaixonado(a)". Emojis sugeridos: 🤔💡❤️`,
-    '😈 sensual': `**Instruções de Tom:** Picante e sedutor, com um toque de sensualidade respeitosa e confiante. Use palavras como "irresistível", "provocante", "química". Emojis sugeridos: 🔥😈😏`,
-    'sensual': `**Instruções de Tom:** Picante e sedutor, com um toque de sensualidade respeitosa e confiante. Use palavras como "irresistível", "provocante", "química". Emojis sugeridos: 🔥😈😏`,
+    '😘 flertar': `**Instruções de Tom:** Flertante e romântico, demonstrando interesse amoroso de forma sutil e charmosa. Use palavras baseadas no que VOCÊ VÊ na imagem como "encantador(a)", "olhar", "estilo", "energia", "conexão".`,
+    'flertar': `**Instruções de Tom:** Flertante e romântico, demonstrando interesse amoroso de forma sutil e charmosa. Use palavras baseadas no que VOCÊ VÊ na imagem como "encantador(a)", "olhar", "estilo", "energia", "conexão".`,
+    '😏 descontraído': `**Instruções de Tom:** Casual e divertido, com um toque de humor e leveza. Use expressões como "que vibe", "curti", "top".`,
+    'descontraído': `**Instruções de Tom:** Casual e divertido, com um toque de humor e leveza. Use expressões como "que vibe", "curti", "top".`,
+    '😎 casual': `**Instruções de Tom:** Natural e espontâneo, como uma conversa entre amigos. Foque em observações simples e convites abertos.`,
+    'casual': `**Instruções de Tom:** Natural e espontâneo, como uma conversa entre amigos. Foque em observações simples e convites abertos.`,
+    '💬 genuíno': `**Instruções de Tom:** Autêntico e profundo, mostrando interesse real na pessoa e em seus hobbies/paixões. Use palavras como "interessante", "curiosidade", "apaixonado(a)".`,
+    'genuíno': `**Instruções de Tom:** Autêntico e profundo, mostrando interesse real na pessoa e em seus hobbies/paixões. Use palavras como "interessante", "curiosidade", "apaixonado(a)".`,
+    '😈 sensual': `**Instruções de Tom:** Picante e sedutor, com um toque de sensualidade respeitosa e confiante. Use palavras como "irresistível", "provocante", "química".`,
+    'sensual': `**Instruções de Tom:** Picante e sedutor, com um toque de sensualidade respeitosa e confiante. Use palavras como "irresistível", "provocante", "química".`,
     'nenhum': ''
   }
   
-  return toneMap[normalizedTone] || `**Instruções de Tom:** Use um tom descontraído e casual por padrão, adaptando-se aos elementos visuais da imagem. Emojis sugeridos: 😊✨👋`
+  return toneMap[normalizedTone] || `**Instruções de Tom:** Use um tom descontraído e casual por padrão, adaptando-se aos elementos visuais da imagem.`
 }
 
 function parseSuggestions(content: string): string[] {
   const suggestions: string[] = []
-
-  // Remove markdown code blocks if present
-  let cleanedContent = content.replace(/```json\n?|```\n?/g, '').trim()
-
-  // Remove brackets if present (from old format)
-  if (cleanedContent.startsWith('[') && cleanedContent.endsWith(']')) {
-    cleanedContent = cleanedContent.substring(1, cleanedContent.length - 1).trim()
+  const lines = content.split('\n')
+  
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (trimmed && /^\d+\./.test(trimmed)) {
+      // Remove the number and dot from the beginning
+      const suggestion = trimmed.replace(/^\d+\.\s*/, '')
+      if (suggestion) {
+        suggestions.push(suggestion)
+      }
+    }
   }
-
-  // Add the single suggestion
-  if (cleanedContent) {
-    suggestions.push(cleanedContent)
+  
+  // If parsing failed, try to extract any meaningful content
+  if (suggestions.length === 0 && content.trim()) {
+    // Split by common separators and take first 3 meaningful parts
+    const parts = content.split(/[.!?]/).filter(part => part.trim().length > 10)
+    suggestions.push(...parts.slice(0, 3).map(part => part.trim()))
   }
-
-  // Fallback if no content
+  
+  // Ensure we have at least some suggestions
   if (suggestions.length === 0) {
-    suggestions.push('Que foto incrível! Me conta mais sobre essa aventura')
+    suggestions.push(
+      'Que foto incrível! Me conta mais sobre essa aventura',
+      'Adorei seu estilo, você tem um sorriso contagiante',
+      'Essa imagem me deixou curioso para te conhecer melhor'
+    )
   }
-
-  return suggestions.slice(0, 1) // Return only 1 suggestion
+  
+  return suggestions.slice(0, 3) // Ensure max 3 suggestions
 }

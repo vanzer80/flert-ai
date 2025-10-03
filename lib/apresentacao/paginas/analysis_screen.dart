@@ -28,6 +28,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   List<String> suggestions = [
     'Tenho que admitir, você fica muito fofo com esse maiô'
   ];
+  List<String> _allSuggestions = []; // Histórico completo de sugestões
   bool isLoading = false;
   String? _storageImagePath; // caminho no bucket 'images' (ex.: img_123.jpg)
   String? _currentConversationId; // ID da conversa atual
@@ -38,7 +39,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   @override
   void initState() {
     super.initState();
-    _focusController.text = 'Defina seu foco';
+    // Não definir placeholder aqui - deixar vazio inicialmente
     _initUploadAndGenerate();
   }
 
@@ -454,6 +455,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       
       setState(() {
         suggestions = list.map((e) => e.toString()).toList();
+        // Adicionar ao histórico completo
+        _allSuggestions.addAll(suggestions);
         if (conversationId != null) {
           _currentConversationId = conversationId.toString();
         }
@@ -490,10 +493,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         originalText: _storageImagePath ?? '', // se vazio, função cai para modo texto
         tone: selectedTone,
         focus: _focusController.text.isEmpty ? null : _focusController.text,
-        previousSuggestions: suggestions,
+        focusTags: selectedFocusTags.isEmpty ? null : selectedFocusTags,
+        previousSuggestions: _allSuggestions, // Enviar histórico completo
       );
       setState(() {
         suggestions = list;
+        // Adicionar ao histórico completo
+        _allSuggestions.addAll(suggestions);
         isLoading = false;
       });
     } catch (e) {

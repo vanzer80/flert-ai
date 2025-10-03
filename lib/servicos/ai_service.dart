@@ -18,6 +18,7 @@ class AIService {
 
   // Upload a imagem para o Storage 'images' e retorna o caminho (ex.: images/abc.jpg)
   // Em Web, baixa bytes se a URL for http/https. Se for blob: retorna null.
+  // Se upload falhar, tenta enviar base64 diretamente
   Future<String?> uploadImageToStorage({
     required String imagePath,
   }) async {
@@ -45,16 +46,29 @@ class AIService {
 
       if (bytes == null) return null;
 
-      await storage.uploadBinary(
-        fileName,
-        bytes,
-        fileOptions: const FileOptions(
-          upsert: true,
-          contentType: 'image/jpeg',
-        ),
-      );
-      return fileName; // caminho relativo no bucket
+      try {
+        await storage.uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: const FileOptions(
+            upsert: true,
+            contentType: 'image/jpeg',
+          ),
+        );
+        return fileName; // caminho relativo no bucket
+      } catch (uploadError) {
+        // Se upload falhou, tenta enviar base64 diretamente
+        debugPrint('Upload falhou, tentando base64: $uploadError');
+        try {
+          final base64String = base64Encode(bytes);
+          return 'base64:$base64String'; // Prefixo para identificar base64
+        } catch (base64Error) {
+          debugPrint('Erro ao converter para base64: $base64Error');
+          return null;
+        }
+      }
     } catch (e) {
+      debugPrint('Erro geral no upload: $e');
       return null;
     }
   }
@@ -115,6 +129,7 @@ class AIService {
     required String originalText,
     required String tone,
     String? focus,
+    List<String>? focusTags,
     List<String>? previousSuggestions,
   }) async {
     try {
@@ -125,6 +140,7 @@ class AIService {
         'image_path': originalText,
         'tone': tone,
         'focus': focus ?? '',
+        'focus_tags': focusTags ?? [],
         if (previousSuggestions != null && previousSuggestions.isNotEmpty)
           'previous_suggestions': previousSuggestions,
       });
