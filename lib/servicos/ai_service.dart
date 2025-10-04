@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants/supabase_config.dart';
+import '../utils/preprocess_screenshot.dart';
+import 'ocr_service.dart';
 import 'user_learning_service.dart';
 
 class AIService {
@@ -12,6 +14,9 @@ class AIService {
   static final AIService _instance = AIService._internal();
   factory AIService() => _instance;
   AIService._internal();
+
+  // Cache para vision_context por image_id
+  final Map<String, Map<String, dynamic>> _visionContextCache = {};
 
   // No direct initialization needed; Edge Function holds the OpenAI key
   static void initialize() {}
@@ -46,10 +51,21 @@ class AIService {
 
       if (bytes == null) return null;
 
+      // NOVO: Aplicar pré-processamento leve on-device
+      try {
+        final processedBytes = await ImagePreprocessor.preprocessImage(bytes!);
+        if (processedBytes.length < bytes!.length) {
+          bytes = processedBytes;
+          debugPrint('Imagem pré-processada: ${bytes!.length} bytes');
+        }
+      } catch (preprocessError) {
+        debugPrint('Erro no pré-processamento, usando imagem original: $preprocessError');
+      }
+
       try {
         await storage.uploadBinary(
           fileName,
-          bytes,
+          bytes!,
           fileOptions: const FileOptions(
             upsert: true,
             contentType: 'image/jpeg',
@@ -57,11 +73,11 @@ class AIService {
         );
         return fileName; // caminho relativo no bucket
       } catch (uploadError) {
-        // Se upload falhou, tenta enviar base64 diretamente
+        // Se upload falhou, converte para base64 e retorna com prefixo
         debugPrint('Upload falhou, tentando base64: $uploadError');
         try {
-          final base64String = base64Encode(bytes);
-          return 'base64:$base64String'; // Prefixo para identificar base64
+          final base64String = base64Encode(bytes!);
+          return 'base64:$base64String'; // Prefixo identifica que é base64
         } catch (base64Error) {
           debugPrint('Erro ao converter para base64: $base64Error');
           return null;
@@ -83,21 +99,75 @@ class AIService {
       // Buscar instruções personalizadas do usuário
       final learningService = UserLearningService();
       final personalizedInstructions = await learningService.getPersonalizedInstructions();
-      
+
+      // NOVO: Executar OCR antes da análise (apenas mobile, web usa Vision API)
+      String? ocrText;
+      if (imagePath != null && imagePath.isNotEmpty && !kIsWeb) {
+        try {
+          // Obter bytes da imagem para OCR
+          Uint8List? imageBytes;
+          
+          if (imagePath.startsWith('base64:')) {
+            final base64Data = imagePath.substring(7);
+            imageBytes = base64Decode(base64Data);
+          } else if (!imagePath.startsWith('http')) {
+            final file = File(imagePath);
+            if (await file.exists()) {
+              imageBytes = await file.readAsBytes();
+            }
+          }
+
+          if (imageBytes != null) {
+            final ocrService = OCRService();
+            ocrText = await ocrService.extractText(imageBytes);
+            
+            if (ocrText != null && ocrText.isNotEmpty) {
+              debugPrint('✅ OCR extraiu ${ocrText.length} caracteres');
+            }
+          }
+        } catch (ocrError) {
+          debugPrint('⚠️ Erro no OCR (não-crítico): $ocrError');
+          // Continua sem OCR - não é crítico
+        }
+      }
+
       // Call Supabase Edge Function for image analysis
       final payload = <String, dynamic>{
         'tone': tone,
         'focus_tags': focusTags ?? [],
       };
+
+      // Melhor tratamento de base64 quando upload falha
       if (imagePath != null && imagePath.isNotEmpty) {
-        payload['image_path'] = imagePath;
+        if (imagePath.startsWith('base64:')) {
+          // Já é base64, extrair e enviar diretamente
+          final base64Data = imagePath.substring(7); // Remove 'base64:' prefix
+          payload['image_base64'] = base64Data;
+          debugPrint('Enviando imagem como base64 (upload falhou)');
+        } else {
+          payload['image_path'] = imagePath;
+        }
       }
+
+      // NOVO: Incluir texto OCR se disponível (mobile only)
+      if (ocrText != null && ocrText.isNotEmpty) {
+        payload['ocr_text_raw'] = ocrText;
+        debugPrint('📝 OCR incluído no payload: ${ocrText.substring(0, ocrText.length > 50 ? 50 : ocrText.length)}...');
+      }
+
       // Adicionar instruções personalizadas se existirem
       if (personalizedInstructions.isNotEmpty) {
         payload['personalized_instructions'] = personalizedInstructions;
       }
-      
+
       final response = await _callEdgeFunction('analyze-conversation', payload);
+
+      // Guardar vision_context se disponível (para uso em "Gerar mais")
+      if (response.containsKey('vision_context') && response['vision_context'] != null) {
+        final imageId = imagePath ?? 'no_image';
+        _visionContextCache[imageId] = response['vision_context'];
+        debugPrint('Vision context armazenado em cache para imagem: $imageId');
+      }
 
       return response;
     } catch (e) {
@@ -133,17 +203,34 @@ class AIService {
     List<String>? previousSuggestions,
   }) async {
     try {
-      // Agora a Edge Function aceita URL absoluta em image_path.
-      // Enviamos novamente a imagem para contextualizar as novas sugestões.
-      // CRÍTICO: Enviar previous_suggestions para evitar repetição!
-      final response = await _callEdgeFunction('analyze-conversation', {
-        'image_path': originalText,
+      // NOVO: Usar vision_context em cache para evitar reprocessamento de visão
+      final imageId = originalText;
+      final visionContext = _visionContextCache[imageId];
+
+      final payload = <String, dynamic>{
         'tone': tone,
         'focus': focus ?? '',
         'focus_tags': focusTags ?? [],
-        if (previousSuggestions != null && previousSuggestions.isNotEmpty)
-          'previous_suggestions': previousSuggestions,
-      });
+        'previous_suggestions': previousSuggestions ?? [],
+      };
+
+      if (visionContext != null) {
+        // Usar contexto de visão em cache (skip vision processing)
+        payload['skip_vision'] = true;
+        payload['vision_context'] = visionContext;
+        debugPrint('Usando vision_context em cache para gerar mais sugestões');
+      } else {
+        // Fallback: enviar novamente a imagem (comportamento antigo)
+        payload['image_path'] = originalText;
+        debugPrint('Vision context não disponível, reenviando imagem');
+      }
+
+      final response = await _callEdgeFunction('analyze-conversation', payload);
+
+      // Atualizar cache se novo vision_context for recebido
+      if (response.containsKey('vision_context') && response['vision_context'] != null) {
+        _visionContextCache[imageId] = response['vision_context'];
+      }
 
       final List<dynamic> list = response['suggestions'] ?? [];
       return list.map((e) => e.toString()).toList();

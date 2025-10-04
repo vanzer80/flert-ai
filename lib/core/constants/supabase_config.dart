@@ -1,7 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseConfig {
-  // Buscar configurações das variáveis de ambiente
+  // Configurações temporárias para desenvolvimento (REMOVER EM PRODUÇÃO)
   static String get url => const String.fromEnvironment(
     'SUPABASE_URL',
     defaultValue: 'https://olojvpoqosrjcoxygiyf.supabase.co'
@@ -12,15 +12,26 @@ class SupabaseConfig {
     defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sb2p2cG9xb3NyamNveHlnaXlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwOTUxNTEsImV4cCI6MjA3NDY3MTE1MX0.QyJcKSHfWA0RyzoucvSObabOl5lsdgvJ3BnZsBy7HX8'
   );
 
-  // Configurações do banco de dados
-  static const String host = 'aws-1-sa-east-1.pooler.supabase.com';
-  static const int port = 6543;
-  static const String database = 'postgres';
-  static const String user = 'postgres.olojvpoqosrjcoxygiyf';
+  // Configurações do banco de dados (usar variáveis de ambiente)
+  static String get host => const String.fromEnvironment(
+    'SUPABASE_DB_HOST',
+    defaultValue: 'aws-1-sa-east-1.pooler.supabase.com'
+  );
 
-  // Chaves adicionais
-  static const String publishableKey = 'sb_publishable_sQQEaOA4VmvgaDEXJgI25Q_yVt2VF_E';
-  static const String secretKey = 'sb_secret_jbDrvR5xbv9RxbXpNySPQQ_WVwzest8';
+  static int get port {
+    const envPort = String.fromEnvironment('SUPABASE_DB_PORT', defaultValue: '6543');
+    return int.tryParse(envPort) ?? 6543;
+  }
+
+  static String get database => const String.fromEnvironment(
+    'SUPABASE_DB_NAME',
+    defaultValue: 'postgres'
+  );
+
+  static String get user => const String.fromEnvironment(
+    'SUPABASE_DB_USER',
+    defaultValue: 'postgres'
+  );
 
   static SupabaseClient get client => Supabase.instance.client;
 
@@ -32,11 +43,10 @@ class SupabaseConfig {
       );
       // ignore: avoid_print
       print('[SupabaseConfig] Supabase inicializado com sucesso!');
-      print('[SupabaseConfig] URL: $url');
     } catch (e) {
       // ignore: avoid_print
       print('[SupabaseConfig] Erro ao inicializar Supabase: $e');
-      rethrow;
+      // Não relança o erro para não quebrar o app em desenvolvimento
     }
   }
 }

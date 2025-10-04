@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flerta_ai/servicos/ai_service.dart';
+import 'dart:typed_data';
 
 void main() {
   group('AIService Tests', () {
@@ -21,7 +22,7 @@ void main() {
 2. Segunda sugestão interessante
 3. Terceira opção criativa
 ''';
-      
+
       // This would require making _parseSuggestions public or creating a test helper
       // For now, we'll test the public interface
       expect(mockResponse.contains('1.'), isTrue);
@@ -34,7 +35,7 @@ void main() {
       const flirtTone = '😘 flertar';
       const casualTone = '😎 casual';
       const genuineTone = '💬 genuíno';
-      
+
       expect(flirtTone.contains('flertar'), isTrue);
       expect(casualTone.contains('casual'), isTrue);
       expect(genuineTone.contains('genuíno'), isTrue);
@@ -66,7 +67,7 @@ void main() {
     test('should create exception with message', () {
       const message = 'Test error message';
       final exception = AIServiceException(message);
-      
+
       expect(exception.message, equals(message));
       expect(exception.toString(), contains(message));
     });

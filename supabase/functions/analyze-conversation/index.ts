@@ -18,6 +18,11 @@ const supabaseAdmin = createClient(
   }
 )
 
+interface ConversationSegment {
+  autor: string
+  texto: string
+}
+
 interface AnalysisRequest {
   image_path?: string
   image_base64?: string
@@ -60,6 +65,8 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const startTime = Date.now() // NOVO: Início da medição de latência
+
   try {
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -84,6 +91,45 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
+    }
+
+    // NOVO: Rate limiting para usuários não autenticados (50 requisições por hora por IP)
+    if (!user_id) {
+      const clientIP = req.headers.get('x-forwarded-for') ||
+                      req.headers.get('x-real-ip') ||
+                      'unknown'
+
+      try {
+        const { data: rateLimitData, error: rateLimitError } = await supabaseClient
+          .rpc('check_anonymous_rate_limit', {
+            client_ip: clientIP,
+            max_requests: 50,
+            window_minutes: 60
+          })
+
+        if (rateLimitError) {
+          console.error('Rate limit check error:', rateLimitError)
+        } else if (rateLimitData === false) {
+          return new Response(
+            JSON.stringify({
+              error: 'Rate limit exceeded',
+              message: 'Muitas requisições. Tente novamente em alguns minutos.',
+              code: 'RATE_LIMIT_EXCEEDED'
+            }),
+            {
+              status: 429,
+              headers: {
+                ...corsHeaders,
+                'Content-Type': 'application/json',
+                'Retry-After': '3600' // 1 hora
+              }
+            }
+          )
+        }
+      } catch (rateLimitError) {
+        console.error('Rate limit check failed:', rateLimitError)
+        // Continua execução mesmo se rate limit falhar
+      }
     }
 
     // Check daily usage limit if user_id is provided
@@ -237,18 +283,18 @@ Se a imagem contém uma conversa de aplicativo de namoro (Tinder, Bumble, etc.),
               // Extract conversation segments if available
               if (parsedVision.conversa_segmentada && Array.isArray(parsedVision.conversa_segmentada) && parsedVision.conversa_segmentada.length > 0) {
                 conversationSegments = parsedVision.conversa_segmentada
-                
+
                 console.log(`✅ Conversa segmentada detectada: ${conversationSegments.length} mensagens totais`)
-                
+
                 // Não adicionar ao imageDescription - será tratado separadamente no system prompt
               }
             } catch (parseError) {
               console.error('Erro ao parsear resposta JSON do Vision:', parseError)
               console.log('Resposta original:', visionResult)
-              
+
               // Fallback: usar resposta bruta
               imageDescription = visionResult
-              
+
               // Tentar extrair nome manualmente
               const nameMatch = visionResult.match(/nome[:\s]+([\w\s]+)/i)
               if (nameMatch) {
@@ -263,6 +309,9 @@ Se a imagem contém uma conversa de aplicativo de namoro (Tinder, Bumble, etc.),
         }
       }
     }
+
+    // NOVO: Extrair âncoras da análise de visão
+    const anchors = extractAnchors(personName, imageDescription, conversationSegments)
 
     // Add additional text context if provided
     if (text && text.trim().length > 0) {
@@ -348,6 +397,74 @@ Se anteriores mencionaram "praia", "sol", "vibe", agora foque em "aventura", "pe
     // Parse suggestions from AI response
     const suggestions = parseSuggestions(aiResponse)
 
+    // NOVO: Validar âncoras na sugestão e regenerar se necessário
+    let finalSuggestion = suggestions[0]
+    let anchorsUsed: string[] = []
+    let lowConfidence = false
+
+    if (anchors.length > 0) {
+      const validation = validateSuggestionAnchors(finalSuggestion, anchors)
+      anchorsUsed = validation.anchorsUsed
+
+      // Se a sugestão não usa âncoras suficientes, tentar regenerar uma vez
+      if (!validation.isValid) {
+        console.log('⚠️ Sugestão inicial sem âncoras suficientes, tentando regenerar...')
+
+        // Adicionar instrução específica para usar âncoras
+        const reinforcedSystemPrompt = systemPrompt + `\n\n**⚠️ INSTRUÇÃO CRÍTICA - REGENERAÇÃO:**
+A sugestão anterior não usou elementos suficientes da imagem/conversa. Use pelo menos uma das seguintes âncoras específicas: ${anchors.slice(0, 3).join(', ')}
+Certifique-se de que sua resposta contenha pelo menos uma dessas palavras/expressões!`
+
+        const regenerationMessages: OpenAIMessage[] = [
+          {
+            role: 'system',
+            content: reinforcedSystemPrompt
+          },
+          {
+            role: 'user',
+            content: 'Gere apenas 1 sugestão de mensagem que use elementos específicos da imagem/conversa fornecida, especialmente as âncoras mencionadas.'
+          }
+        ]
+
+        try {
+          const regenResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: image_base64 || image_path ? 'gpt-4o' : 'gpt-4o-mini',
+              messages: regenerationMessages,
+              max_tokens: 500,
+              temperature: 0.8,
+            }),
+          })
+
+          if (regenResponse.ok) {
+            const regenData = await regenResponse.json()
+            const regenAiResponse = regenData.choices[0]?.message?.content || ''
+            const regenSuggestions = parseSuggestions(regenAiResponse)
+
+            if (regenSuggestions.length > 0) {
+              const regenValidation = validateSuggestionAnchors(regenSuggestions[0], anchors)
+              if (regenValidation.isValid) {
+                finalSuggestion = regenSuggestions[0]
+                anchorsUsed = regenValidation.anchorsUsed
+                console.log('✅ Sugestão regenerada com sucesso usando âncoras!')
+              } else {
+                lowConfidence = true
+                console.log('⚠️ Mesmo após regeneração, sugestão ainda não usa âncoras suficientes')
+              }
+            }
+          }
+        } catch (regenError) {
+          console.error('Erro na regeneração:', regenError)
+          lowConfidence = true
+        }
+      }
+    }
+
     // Save conversation and suggestions to database if user_id is provided
     let conversationId = null
     if (user_id) {
@@ -363,9 +480,17 @@ Se anteriores mencionaram "praia", "sol", "vibe", agora foque em "aventura", "pe
               focus,
               focus_tags,
               ai_response: aiResponse,
-              suggestions,
+              suggestions: [finalSuggestion], // Usar sugestão final validada
               conversation_segments: conversationSegments, // NOVO: Salvar segmentos detectados
               has_conversation: conversationSegments.length > 0,
+              vision_context: !skip_vision && (image_base64 || image_path) ? {
+                personName,
+                imageDescription,
+                conversationSegments: conversationSegments
+              } : null, // NOVO: Salvar contexto de visão quando disponível
+              anchors: anchors, // NOVO: Salvar âncoras extraídas
+              anchors_used: anchorsUsed, // NOVO: Âncoras usadas na sugestão final
+              low_confidence: lowConfidence, // NOVO: Flag de baixa confiança
               timestamp: new Date().toISOString()
             }
           })
@@ -416,9 +541,9 @@ Se anteriores mencionaram "praia", "sol", "vibe", agora foque em "aventura", "pe
     }
 
     // Return successful response with conversation segments
-    const response = {
+    const response: any = {
       success: true,
-      suggestions,
+      suggestions: [finalSuggestion], // Usar sugestão final validada
       conversation_id: conversationId,
       tone,
       focus,
@@ -430,8 +555,56 @@ Se anteriores mencionaram "praia", "sol", "vibe", agora foque em "aventura", "pe
         model_used: image_base64 || image_path ? 'gpt-4o' : 'gpt-4o-mini',
         tokens_used: openaiData.usage?.total_tokens || 0,
         vision_capabilities: 'conversation_segmentation_enabled'
+      },
+      // NOVO: Informações sobre validação de âncoras
+      anchors_info: {
+        total_anchors: anchors.length,
+        anchors_used: anchorsUsed.length,
+        low_confidence: lowConfidence
       }
     }
+
+    // Add vision_context if this was a fresh vision analysis (not skip_vision)
+    if (!skip_vision && (image_base64 || image_path)) {
+      response.vision_context = {
+        personName,
+        imageDescription,
+        conversationSegments: conversationSegments
+      }
+    }
+
+    // NOVO: Calcular métricas de qualidade e repetição
+    const endTime = Date.now()
+    const latencyMs = endTime - startTime
+
+    // Calcular taxa de repetição com sugestões anteriores
+    let repetitionRate = 0.0
+    if (previous_suggestions && previous_suggestions.length > 0) {
+      repetitionRate = calculateRepetitionRate(finalSuggestion, previous_suggestions)
+    }
+
+    // NOVO: Salvar métricas no banco se conversation_id existir
+    if (conversationId && user_id) {
+      try {
+        await supabaseClient
+          .from('generation_metrics')
+          .insert({
+            conversation_id: conversationId,
+            latency_ms: latencyMs,
+            tokens_input: openaiData.usage?.prompt_tokens || 0,
+            tokens_output: openaiData.usage?.completion_tokens || 0,
+            anchors_used: anchorsUsed.length,
+            anchors_total: anchors.length,
+            repetition_rate: repetitionRate,
+            low_confidence: lowConfidence
+          })
+
+        console.log(`📊 Métricas salvas: ${latencyMs}ms, ${anchorsUsed.length}/${anchors.length} âncoras, ${repetitionRate.toFixed(2)} repetição`)
+      } catch (metricsError) {
+        console.error('Erro ao salvar métricas:', metricsError)
+      }
+    }
+
     return new Response(
       JSON.stringify(response),
       { 
@@ -693,6 +866,14 @@ Se MATCH disse: "Adoro viajar, acabei de voltar da Bahia"
 
 Sua tarefa é analisar ${hasConversation ? 'a conversa fornecida' : 'a imagem de perfil fornecida'} com olhos de águia, extraindo cada detalhe ${hasConversation ? 'contextual e emocional' : 'visual e textual'} que possa inspirar uma conexão. Use essas observações para criar mensagens de paquera personalizadas, criativas e que soem 100% humanas.
 
+**REGRAS ANTI-ALUCINAÇÃO - LEIA COM ATENÇÃO:**
+- Use APENAS elementos confirmados por OCR/visão computadorizada
+- Se um dado não está visível/lido na imagem, NÃO mencione
+- Se faltar contexto visual, assuma neutralidade ou faça uma pergunta curta contextual
+- PROIBIDO placeholders ('[nome]', '[cidade]') e afirmações não verificáveis
+- NÃO invente detalhes, hobbies, locais ou características não extraídos
+- Baseie-se SOMENTE no que foi explicitamente detectado pelo sistema de visão
+
 **Informações Fornecidas:**
 - **Descrição Detalhada da Imagem:** ${imageDescription}
 ${nameSection}${toneSection}${focusSection}${conversationHistorySection}${conversationSection}
@@ -765,4 +946,140 @@ function parseSuggestions(content: string): string[] {
   }
 
   return suggestions.slice(0, 1) // Return only 1 suggestion
+}
+
+/**
+ * NOVO: Extrai âncoras da análise de visão para validação anti-alucinação
+ */
+function extractAnchors(personName: string, imageDescription: string, conversationSegments: ConversationSegment[]): string[] {
+  const anchors = new Set<string>()
+
+  // Adicionar nome da pessoa se disponível
+  if (personName && personName !== 'Nenhum') {
+    anchors.add(personName.toLowerCase())
+  }
+
+  // Extrair entidades do texto OCR (nomes próprios, números, emojis)
+  const ocrMatch = imageDescription.match(/Texto Extraído \(OCR\): (.+)$/i)
+  if (ocrMatch) {
+    const ocrText = ocrMatch[1]
+    // Nomes próprios (palavras iniciando com maiúscula)
+    const properNames = ocrText.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g) || []
+    properNames.forEach(name => anchors.add(name.toLowerCase()))
+
+    // Emojis
+    const emojis = ocrText.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu) || []
+    emojis.forEach(emoji => anchors.add(emoji))
+
+    // Números
+    const numbers = ocrText.match(/\b\d+\b/g) || []
+    numbers.forEach(num => anchors.add(num))
+  }
+
+  // Extrair tokens-chave da descrição visual
+  const visualDesc = imageDescription.match(/Descrição Visual: (.+?)(?:\n|$)/i)?.[1] || ''
+  if (visualDesc) {
+    // Palavras-chave contextuais (objetos, locais, atividades)
+    const keywords = [
+      'praia', 'mar', 'sol', 'areia', 'ondas',
+      'montanha', 'trilha', 'natureza', 'verde',
+      'cidade', 'urbano', 'rua', 'prédio',
+      'cachorro', 'gato', 'pet', 'animal',
+      'livro', 'leitura', 'estudo',
+      'esporte', 'bola', 'corrida', 'academia',
+      'comida', 'culinária', 'restaurante',
+      'música', 'instrumento', 'guitarra', 'piano',
+      'viagem', 'mochila', 'aeroporto', 'carro',
+      'trabalho', 'escritório', 'computador',
+      'festa', 'balada', 'bar', 'cerveja'
+    ]
+
+    keywords.forEach(keyword => {
+      if (visualDesc.toLowerCase().includes(keyword)) {
+        anchors.add(keyword)
+      }
+    })
+  }
+
+  // Extrair elementos únicos das mensagens da conversa
+  conversationSegments.forEach(segment => {
+    // Palavras únicas e significativas das mensagens
+    const words = segment.texto.split(/\s+/)
+    words.forEach(word => {
+      const cleanWord = word.replace(/[^\w]/g, '').toLowerCase()
+      if (cleanWord.length > 3 && !['que', 'com', 'para', 'uma', 'como', 'mais', 'muito', 'tudo'].includes(cleanWord)) {
+        anchors.add(cleanWord)
+      }
+    })
+  })
+
+  console.log(`🔗 Âncoras extraídas: ${Array.from(anchors).slice(0, 5).join(', ')}${anchors.size > 5 ? '...' : ''}`)
+  return Array.from(anchors)
+}
+
+/**
+ * NOVO: Valida se a sugestão contém âncoras suficientes
+ */
+function validateSuggestionAnchors(suggestion: string, anchors: string[]): { isValid: boolean, anchorsUsed: string[] } {
+  const suggestionLower = suggestion.toLowerCase()
+  const anchorsUsed: string[] = []
+
+  anchors.forEach(anchor => {
+    if (suggestionLower.includes(anchor)) {
+      anchorsUsed.push(anchor)
+    }
+  })
+
+  const isValid = anchorsUsed.length >= 1
+  console.log(`✅ Validação de âncoras: ${anchorsUsed.length}/${anchors.length} encontradas - ${isValid ? 'VÁLIDA' : 'INVÁLIDA'}`)
+
+  return { isValid, anchorsUsed }
+}
+
+/**
+ * NOVO: Calcula taxa de repetição usando similaridade de Jaccard com bigramas
+ */
+function calculateRepetitionRate(suggestion: string, previousSuggestions: string[]): number {
+  if (previousSuggestions.length === 0) return 0.0
+
+  const suggestionBigrams = getBigrams(suggestion.toLowerCase())
+  let maxSimilarity = 0.0
+
+  for (const prevSuggestion of previousSuggestions) {
+    const prevBigrams = getBigrams(prevSuggestion.toLowerCase())
+    const similarity = jaccardSimilarity(suggestionBigrams, prevBigrams)
+    if (similarity > maxSimilarity) {
+      maxSimilarity = similarity
+    }
+  }
+
+  return maxSimilarity
+}
+
+/**
+ * NOVO: Gera bigramas de um texto
+ */
+function getBigrams(text: string): Set<string> {
+  const bigrams = new Set<string>()
+  const words = text.split(/\s+/)
+
+  for (const word of words) {
+    if (word.length >= 2) {
+      for (let i = 0; i < word.length - 1; i++) {
+        bigrams.add(word.substring(i, i + 2))
+      }
+    }
+  }
+
+  return bigrams
+}
+
+/**
+ * NOVO: Calcula similaridade de Jaccard entre dois conjuntos
+ */
+function jaccardSimilarity(set1: Set<string>, set2: Set<string>): number {
+  const intersection = new Set([...set1].filter(x => set2.has(x)))
+  const union = new Set([...set1, ...set2])
+
+  return intersection.size / union.size
 }

@@ -1,0 +1,91 @@
+name: FlertAI CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Testes do Flutter
+  flutter-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0'
+        channel: 'stable'
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Verify formatting
+      run: flutter format --set-exit-if-changed .
+
+    - name: Analyze project source
+      run: flutter analyze
+
+    - name: Run tests
+      run: flutter test
+
+    - name: Build APK (debug)
+      run: flutter build apk --debug
+
+  # Testes das Edge Functions (Deno)
+  edge-functions-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Deno
+      uses: denoland/setup-deno@v1
+      with:
+        deno-version: v1.38.0
+
+    - name: Install dependencies and run tests
+      working-directory: ./supabase/functions/analyze-conversation
+      run: |
+        deno check index.ts
+        deno lint index.ts
+
+  # Deploy para produção (apenas na main)
+  deploy-production:
+    needs: [flutter-test, edge-functions-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy Edge Function
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      run: |
+        # Instalar Supabase CLI
+        npm install -g supabase
+
+        # Deploy da Edge Function
+        supabase functions deploy analyze-conversation --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
+
+    - name: Build for production
+      run: flutter build apk --release
+
+    - name: Deploy to Netlify (se aplicável)
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      run: |
+        # Build web app
+        flutter build web --release
+
+        # Deploy para Netlify (se estiver usando Netlify)
+        # netlify deploy --prod --dir=build/web
