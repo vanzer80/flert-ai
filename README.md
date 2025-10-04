@@ -1,19 +1,34 @@
+# 💬 FlertAI v3 - Assistente de Paquera com IA
+
+> Aplicativo inteligente para geração de mensagens de paquera usando IA multimodal (GPT-4o Vision)
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.16.0-02569B?logo=flutter)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.1.0-0175C2?logo=dart)](https://dart.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase)](https://supabase.com)
+[![OCR](https://img.shields.io/badge/OCR-Google_ML_Kit-4285F4)](https://developers.google.com/ml-kit)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=github-actions)](https://github.com/features/actions)
+
 ---
 
-## 🚀 **Status do Projeto**
+## 🚀 **Status do Projeto v3.0.0**
 
-✅ **Sistema Cultural References:** 97 referências brasileiras ativas  
-✅ **Integração IA:** Enriquecimento automático de prompts  
-✅ **Deploy Automático:** GitHub Actions configurado  
-⏳ **Teste de Secrets:** Em execução...
+✅ **OCR Completo:** Google ML Kit (mobile) + Vision API (web)  
+✅ **Pipeline Multimodal:** GPT-4o Vision + OCR integrado  
+✅ **Anti-Alucinação:** Validação de âncoras robusta  
+✅ **Cache Inteligente:** Performance otimizada  
+✅ **CI/CD:** Deploy automático configurado  
+✅ **Build Web:** Pronto para produção (31.6 MB)  
+✅ **Documentação:** Completa e atualizada
 
 ---
 
 ## 📋 **Última Atualização**
 
-**Data:** 2025-10-01 11:10  
-**Deploy Automático:** ✅ Configurado  
-**Build Flutter:** ✅ Pronto para produção
+**Versão:** 3.0.0 (Pipeline Multimodal One-Shot)  
+**Data:** 2025-10-03 22:00  
+**Status:** ✅ Produção  
+**Build:** ✅ Web + Android + iOS  
+**Deploy:** ✅ Automático via GitHub Actions
 
 ---
 
@@ -290,7 +305,7 @@ O **FlertAI** é um aplicativo desenvolvido exclusivamente por brasileiros, para
 - Análise inteligente de imagens de perfil
 - Geração de mensagens personalizadas e envolventes
 - Foco total na realidade brasileira
-- Interface moderna e intuitiva
+{{ ... }}
 
 Agradecemos sua participação! Seu feedback nos ajuda a tornar o FlertAI ainda melhor.
 
