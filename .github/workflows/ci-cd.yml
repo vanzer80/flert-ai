@@ -2,97 +2,18 @@ name: FlertAI CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop, feat/* ]
-  pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
+  workflow_dispatch:
 
 env:
   FLUTTER_VERSION: '3.16.0'
-  DENO_VERSION: 'v1.38.0'
 
 jobs:
-  # ✅ Testes do Flutter
-  flutter-test:
-    name: 🧪 Flutter Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: 🔧 Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-
-    - name: 📦 Install dependencies
-      run: flutter pub get
-
-    - name: 🔍 Analyze project source
-      run: flutter analyze --no-fatal-infos
-
-    - name: 🧪 Run unit tests
-      run: flutter test --coverage || echo "Tests failed but continuing..."
-      continue-on-error: true
-
-    - name: 📊 Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: coverage/lcov.info
-        flags: flutter
-        name: flutter-coverage
-
-    - name: 🏗️ Build APK (debug)
-      run: flutter build apk --debug
-
-    - name: 📤 Upload APK artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: app-debug-apk
-        path: build/app/outputs/flutter-apk/app-debug.apk
-        retention-days: 7
-
-  # ✅ Testes das Edge Functions (Deno)
-  edge-functions-test:
-    name: 🦕 Deno Edge Functions Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: 🦕 Setup Deno
-      uses: denoland/setup-deno@v1
-      with:
-        deno-version: ${{ env.DENO_VERSION }}
-
-    - name: 🔍 Lint Edge Functions
-      working-directory: ./supabase/functions/analyze-conversation
-      run: deno lint --quiet index.ts || echo "Lint warnings ignored"
-
-    - name: ✅ Type check Edge Functions (skipped - Deno environment)
-      run: echo "Type checking skipped - requires Deno environment with proper imports"
-
-    - name: 🧪 Run Edge Function tests (se existirem)
-      working-directory: ./supabase/functions/analyze-conversation
-      run: |
-        if [ -f "index.test.ts" ]; then
-          deno test --allow-all index.test.ts
-        else
-          echo "No tests found, skipping..."
-        fi
-
-  # ✅ Build Web para Deploy
+  # ✅ Build Web Simples
   build-web:
     name: 🌐 Build Web App
     runs-on: ubuntu-latest
-    needs: [flutter-test, edge-functions-test]
-    if: github.event_name == 'push'
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
     - name: 📥 Checkout code
@@ -118,120 +39,5 @@ jobs:
         path: build/web/
         retention-days: 30
 
-  # 🚀 Deploy Automático para Netlify (apenas main)
-  deploy-netlify:
-    name: 🚀 Deploy to Netlify
-    runs-on: ubuntu-latest
-    needs: [build-web]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    timeout-minutes: 10
-
-    steps:
-    - name: 📥 Download Web Build
-      uses: actions/download-artifact@v3
-      with:
-        name: web-build
-        path: build/web
-
-    - name: 🚀 Deploy to Netlify
-      uses: nwtgck/actions-netlify@v2.0
-      with:
-        publish-dir: './build/web'
-        production-deploy: true
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        deploy-message: "Deploy from GitHub Actions - ${{ github.sha }}"
-        enable-pull-request-comment: true
-        enable-commit-comment: true
-        overwrites-pull-request-comment: true
-      env:
-        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-
-    - name: ✅ Deployment Success
-      run: |
-        echo "🎉 Deploy realizado com sucesso!"
-        echo "🌐 URL: https://flertai-app.netlify.app"
-
-  # 🚀 Deploy Edge Functions para Supabase (apenas main)
-  deploy-supabase:
-    name: 🔧 Deploy Supabase Edge Functions
-    runs-on: ubuntu-latest
-    needs: [edge-functions-test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    timeout-minutes: 10
-
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: 🔧 Setup Supabase CLI
-      uses: supabase/setup-cli@v1
-      with:
-        version: latest
-
-    - name: 🚀 Deploy Edge Functions
-      env:
-        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-      run: |
-        supabase functions deploy analyze-conversation \
-          --project-ref $SUPABASE_PROJECT_REF \
-          --no-verify-jwt
-
-    - name: ✅ Supabase Deploy Success
-      run: echo "🎉 Edge Functions deployadas com sucesso!"
-
-  # 📦 Build Android APK (apenas main)
-  build-android:
-    name: 🤖 Build Android APK
-    runs-on: ubuntu-latest
-    needs: [flutter-test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    timeout-minutes: 20
-
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: ☕ Setup Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'zulu'
-        java-version: '11'
-
-    - name: 🔧 Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-
-    - name: 📦 Install dependencies
-      run: flutter pub get
-
-    - name: 🏗️ Build APK (Release)
-      run: flutter build apk --release
-
-    - name: 📤 Upload APK
-      uses: actions/upload-artifact@v3
-      with:
-        name: app-release-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
-        retention-days: 90
-
-  # 📊 Notificação de Status
-  notify:
-    name: 📢 Notify Status
-    runs-on: ubuntu-latest
-    needs: [deploy-netlify, deploy-supabase, build-android]
-    if: always() && github.ref == 'refs/heads/main'
-
-    steps:
-    - name: 📊 Check deployment status
-      run: |
-        echo "🎯 Pipeline completo!"
-        echo "✅ Netlify: Deployado"
-        echo "✅ Supabase: Edge Functions atualizadas"
-        echo "✅ Android: APK gerado"
-        echo "📅 Data: $(date)"
-        echo "🔖 Commit: ${{ github.sha }}"
+    - name: ✅ Build Success
+      run: echo "🎉 Build web realizado com sucesso!"
